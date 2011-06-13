@@ -96,13 +96,43 @@ cecho ()
         return
 }
 
+function check_distro(){
+	trap 'trap_handler ${LINENO} $? check_distro' ERR
+	cecho "Verifying compatible distros" green
+	DIST=$(cat /etc/issue | awk '{print $1}')
+	DISTRO=""
+	for d in $DISTROS
+	do
+		if [ "$d" = "$DIST" ]
+		then
+			cecho ">>Found $DIST" green
+			export DISTRO=$DIST
+		fi
+	done
+	if [ -z "$DISTRO" ]
+	then
+		cecho ">>No compatible distro found" red
+		exit 2
+	fi
+}
 
-function killshinken(){
-	trap 'trap_handler ${LINENO} $? killshinken' ERR
+function remove(){
+	trap 'trap_handler ${LINENO} $? remove' ERR
+	cecho "Removing shinken" green
+	skill
+	rm -Rf $TARGET
+	rm -Rf /etc/default/shinken
+	sudo update-rc.d -f shinken remove
+	rm -Rf /etc/init.d/shinken
+}
+
+function skill(){
+	trap 'trap_handler ${LINENO} $? skill' ERR
+	cecho "Killing shinken" green
+	
 	OLDIFS=$IFS
 	IFS=$'\n'
 
-	cecho "Killing shinken" green
 
 	for p in $(ps -aef | grep "^shinken" | grep -v "npcd"|awk '{print $2}')
 	do
@@ -121,39 +151,105 @@ function killshinken(){
 }
 
 function get_from_git(){
+	trap 'trap_handler ${LINENO} $? get_from_git' ERR
+	cecho "get_from_git" green
+	cd $TMP
 	if [ -e shinken ]
 	then
 		rm -Rf shinken
 	fi
-	git clone $GIT
+	git clone $GIT > /dev/null 2>&1
 	cd shinken
-	for fic in $(find . | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq); do echo "Processing $fic"; cp $fic $fic.orig ; sed -i "s/\/usr\/local\/shinken/\/opt\/shinken/g" $fic ; done
+	for fic in $(find . | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq); do cecho ">>Processing $fic" green; cp $fic $fic.orig ; sed -i "s/\/usr\/local\/shinken/\/opt\/shinken/g" $fic ; done
 }
 
-function backup(){
-	if [ ! -e $BACKUPDIR ]
-	then
-		mkdir -p $BACKUPDIR
-	fi
-	echo $DATE
-	cd $BACKUPDIR
-	tar czvf shinken.$DATE.tar.gz $TARGET
-	cd $TMP
+function sinstall(){
+	trap 'trap_handler ${LINENO} $? install' ERR
+	cecho "Installing shinken" green
+	check_distro
+	check_exist
+	prerequisites
+	create_user
+	get_from_git
+	cp -Rf $TMP/shinken $TARGET
+	cp $TARGET/bin/default/shinken.in $TARGET/bin/default/shinken
+	cd $TARGET/bin/default
+	cat $TARGET/bin/default/shinken.in | sed -e  's#ETC\=\(.*\)$#ETC='$TARGET'/etc#g' -e  's#VAR\=\(.*\)$#VAR='$TARGET'/var#g' -e  's#BIN\=\(.*\)$#BIN='$TARGET'/bin#g' > $TARGET/bin/default/shinken 
+	cd $TARGET/bin/init.d
+	mv shinken shinken.in
+	cat shinken.in | sed -e "s/#export PYTHONPATH=/export PYTHONPATH=/g" > $TARGET/bin/init.d/shinken
+	ln -s $TARGET/bin/default/shinken /etc/default/shinken
+	cp $TARGET/bin/init.d/shinken* /etc/init.d/
+	chmod +x /etc/init.d/shinken
+	chown -R $SKUSER:$SKGROUP $TARGET
+        case $DISTRO in
+                Ubuntu)
+			update-rc.d shinken defaults 
+                        exit 0
+                        ;;
+                Debian)
+			update-rc.d shinken defaults 
+                        exit 0
+                        ;;
+        esac
 }
 
-function deploy(){
-	if [ ! -e $TARGET ]
+function create_user(){
+	trap 'trap_handler ${LINENO} $? create_user' ERR
+	cecho "Creating user" green
+	if [ ! -z "$(cat /etc/passwd | grep $SKUSER)" ] 
 	then
-		mkdir -p $TARGET
+		cecho ">>User $SKUSER allready exist" yellow 
+	else
+	    	useradd -s /bin/bash $SKUSER 
 	fi
-	cd $TMP/shinken
-	mv $TMP/shinken/* $TARGET
-	chown -R $SKUSER:$SKPASSWD $TARGET
+    	usermod -G $SKGROUP $SKUSER 
 }
+
+function check_exist(){
+	trap 'trap_handler ${LINENO} $? check_exist' ERR
+	cecho "Checking for existing installation" green
+	if [ -d "$TARGET" ]
+	then
+		cecho ">>Target folder allready exist" red
+		exit 2
+	fi
+	if [ -e "/etc/init.d/shinken" ]
+	then
+		cecho ">>Init scripts allready exist" red
+		exit 2
+	fi
+	if [ -L "/etc/default/shinken" ]
+	then
+		cecho ">>shinken default allready exist" red
+		exit 2
+	fi
+
+}
+
+function prerequisites(){
+	trap 'trap_handler ${LINENO} $? prerequisite' ERR
+	cecho "Checking prerequisite" green
+	prereq="python pyro-nsc wget git"
+	for p in $prereq
+	do
+		if [ -z "$(which $p)" ]
+		then
+			cecho ">>prerequisite $p not found !" red
+			cecho ">>prerequisites are : $prereq" red
+			exit 2	
+		fi
+	done
+}
+
 
 function usage(){
-echo "Usage : shinken -k
-	-k	kill shinken"
+echo "Usage : shinken -k | -i | -d
+	-k	Kill shinken
+	-i	Install shinken
+	-d 	Remove shinken
+"
+
 }
 
 
@@ -166,12 +262,21 @@ fi
 
 cecho "Parsing arguments" green
 
-while getopts "k:" opt; do
+while getopts "kid" opt; do
         case $opt in
                 k)
-                        killshinken
+                        skill
                         exit 0
                         ;;
+                i)
+                       	sinstall 
+                        exit 0
+                        ;;
+                d)
+                       	remove 
+                        exit 0
+                        ;;
+
         esac
 done
 usage
