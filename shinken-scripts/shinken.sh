@@ -163,25 +163,29 @@ function get_from_git(){
 	for fic in $(find . | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq); do cecho ">>Processing $fic" green; cp $fic $fic.orig ; sed -i "s/\/usr\/local\/shinken/\/opt\/shinken/g" $fic ; done
 }
 
-function sinstall(){
-	trap 'trap_handler ${LINENO} $? install' ERR
-	cecho "Installing shinken" green
-	check_distro
-	check_exist
-	prerequisites
-	create_user
-	get_from_git
-	cp -Rf $TMP/shinken $TARGET
-	cp $TARGET/bin/default/shinken.in $TARGET/bin/default/shinken
+function relocate(){
+	trap 'trap_handler ${LINENO} $? relocate' ERR
+	cecho "Relocate source tree to $TARGET" green
 	cd $TARGET/bin/default
 	cat $TARGET/bin/default/shinken.in | sed -e  's#ETC\=\(.*\)$#ETC='$TARGET'/etc#g' -e  's#VAR\=\(.*\)$#VAR='$TARGET'/var#g' -e  's#BIN\=\(.*\)$#BIN='$TARGET'/bin#g' > $TARGET/bin/default/shinken 
 	cd $TARGET/bin/init.d
 	mv shinken shinken.in
+	cp $TARGET/bin/default/shinken.in $TARGET/bin/default/shinken
 	cat shinken.in | sed -e "s/#export PYTHONPATH=/export PYTHONPATH=/g" > $TARGET/bin/init.d/shinken
-	ln -s $TARGET/bin/default/shinken /etc/default/shinken
-	cp $TARGET/bin/init.d/shinken* /etc/init.d/
+}
+
+function fix(){
+	trap 'trap_handler ${LINENO} $? fix' ERR
+	cecho "Applying various fixes" green
 	chmod +x /etc/init.d/shinken
+	chmod +x $TARGET/bin/init.d/shinken
 	chown -R $SKUSER:$SKGROUP $TARGET
+}
+
+function enable(){
+	trap 'trap_handler ${LINENO} $? enable' ERR
+	cecho "Enabling startup scripts" green
+	cp $TARGET/bin/init.d/shinken* /etc/init.d/
         case $DISTRO in
                 Ubuntu)
 			update-rc.d shinken defaults 
@@ -192,6 +196,21 @@ function sinstall(){
                         exit 0
                         ;;
         esac
+}
+
+function sinstall(){
+	trap 'trap_handler ${LINENO} $? install' ERR
+	cecho "Installing shinken" green
+	check_distro
+	check_exist
+	prerequisites
+	create_user
+	get_from_git
+	cp -Rf $TMP/shinken $TARGET
+	relocate
+	ln -s $TARGET/bin/default/shinken /etc/default/shinken
+	cp $TARGET/bin/init.d/shinken* /etc/init.d/
+	fix
 }
 
 function create_user(){
