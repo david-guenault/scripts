@@ -160,24 +160,35 @@ function get_from_git(){
 	fi
 	git clone $GIT > /dev/null 2>&1
 	cd shinken
-	for fic in $(find . | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq); do cecho ">>Processing $fic" green; cp $fic $fic.orig ; sed -i "s/\/usr\/local\/shinken/\/opt\/shinken/g" $fic ; done
 }
 
 function relocate(){
 	trap 'trap_handler ${LINENO} $? relocate' ERR
 	cecho "Relocate source tree to $TARGET" green
+	# relocate source tree
+	for fic in $(find . | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq); do cecho ">>Processing $fic" green; cp $fic $fic.orig ; sed -i 's#/usr/local/shinken#'$TARGET'#g' $fic ; done
+	# relocate also all module.ini files
+	for fic in ./etc/*.ini; 
+	do 
+		cecho ">>Processing $fic" green;
+		sed -i "s#workdir=.*#workdir=/opt/shinken/var#g" $fic  ; 
+		sed -i "1 s/^.*$/&\nworkdir=\/opt\/shinken\/var/g" $fic  ; 
+		cp -f $fic $TARGET/etc/; 
+	done
+	# relocate default file
 	cd $TARGET/bin/default
-	cat $TARGET/bin/default/shinken.in | sed -e  's#ETC\=\(.*\)$#ETC='$TARGET'/etc#g' -e  's#VAR\=\(.*\)$#VAR='$TARGET'/var#g' -e  's#BIN\=\(.*\)$#BIN='$TARGET'/bin#g' > $TARGET/bin/default/shinken 
+	cat $TARGET/bin/default/shinken.in | sed -e  's#ETC\=\(.*\)$#ETC='$TARGET'/etc#g' -e  's#VAR\=\(.*\)$#VAR='$TARGET'/var#g' -e  's#BIN\=\(.*\)$#BIN='$TARGET'/bin#g' > $TARGET/bin/default/shinken
+	# relocate init file
 	cd $TARGET/bin/init.d
 	mv shinken shinken.in
-	cp $TARGET/bin/default/shinken.in $TARGET/bin/default/shinken
-	cat shinken.in | sed -e "s/#export PYTHONPATH=/export PYTHONPATH=/g" > $TARGET/bin/init.d/shinken
+	cat shinken.in | sed -e "s#\#export PYTHONPATH=#export PYTHONPATH=#g" > $TARGET/bin/init.d/shinken
 }
 
 function fix(){
 	trap 'trap_handler ${LINENO} $? fix' ERR
 	cecho "Applying various fixes" green
 	chmod +x /etc/init.d/shinken
+	chmod +x /etc/default/shinken
 	chmod +x $TARGET/bin/init.d/shinken
 	chown -R $SKUSER:$SKGROUP $TARGET
 }
