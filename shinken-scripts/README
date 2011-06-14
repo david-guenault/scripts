@@ -1,4 +1,5 @@
 This is a really simple script allowing to install a fully fonctionnal shinken in seconds !
+Curently only tested with Ubuntu/Debian distros
 
 Usage : shinken -k | -i | -d
 	-k	Kill shinken
@@ -6,4 +7,16 @@ Usage : shinken -k | -i | -d
 	-d 	Remove shinken
 
 You can modify the target folder by editing the shinken.conf file 
+
+#!/bin/bash
+export TMP=/tmp
+export GIT="https://github.com/naparuba/shinken.git"
+export TARGET=/opt/shinken
+export BACKUPDIR="/opt/backup"
+export SKUSER=shinken
+export SKGROUP=shinken
+export UPDATE="bin external_commands db doc man shinken"
+export DATE=$(date +%Y%m%d%H%M%S)
+# DO NOT MODIFY THIS EXCEPT IF YOU TESTED A WORKING DISTRO NOT LISTED HERE !
+export DISTROS="Ubuntu Debian"
 
