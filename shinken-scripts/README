@@ -1,1 +1,9 @@
-THIS IS A WORK IN PROGRESS ... DO NOT USE IT AT THE MOMENT !
+This is a really simple script allowing to install a fully fonctionnal shinken in seconds !
+
+Usage : shinken -k | -i | -d
+	-k	Kill shinken
+	-i	Install shinken
+	-d 	Remove shinken
+
+You can modify the target folder by editing the shinken.conf file 
+
