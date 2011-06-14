@@ -122,7 +122,7 @@ function remove(){
 	skill
 	rm -Rf $TARGET
 	rm -Rf /etc/default/shinken
-	sudo update-rc.d -f shinken remove
+	sudo update-rc.d -f shinken remove > /dev/null 2>&1
 	rm -Rf /etc/init.d/shinken
 }
 
@@ -152,7 +152,7 @@ function skill(){
 
 function get_from_git(){
 	trap 'trap_handler ${LINENO} $? get_from_git' ERR
-	cecho "get_from_git" green
+	cecho "Getting shinken" green
 	cd $TMP
 	if [ -e shinken ]
 	then
@@ -160,6 +160,8 @@ function get_from_git(){
 	fi
 	git clone $GIT > /dev/null 2>&1
 	cd shinken
+	cecho "Switching to version $VERSION" green
+	git checkout $VERSION > /dev/null 2>&1
 }
 
 function relocate(){
@@ -312,9 +314,3 @@ done
 usage
 exit 0
 
-
-
-#killshinken
-#get_from_git
-#backup
-#deploy
