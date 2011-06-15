@@ -274,12 +274,25 @@ function prerequisites(){
 	done
 }
 
+function update(){
+	trap 'trap_handler ${LINENO} $? update' ERR
+	cecho "Updating shinken" green
+	cecho "Not implemented yet" red
+}
+
+function backup(){
+	trap 'trap_handler ${LINENO} $? backup' ERR
+	cecho "Backup shinken" green
+	cecho "Not implemented yet" red
+}
 
 function usage(){
 echo "Usage : shinken -k | -i | -d
 	-k	Kill shinken
 	-i	Install shinken
 	-d 	Remove shinken
+	-u	Update an existing shinken installation
+	-b	Backup shinken configuration
 "
 
 }
@@ -294,7 +307,7 @@ fi
 
 cecho "Parsing arguments" green
 
-while getopts "kid" opt; do
+while getopts "kidub" opt; do
         case $opt in
                 k)
                         skill
@@ -306,6 +319,14 @@ while getopts "kid" opt; do
                         ;;
                 d)
                        	remove 
+                        exit 0
+                        ;;
+                u)
+                       	update 
+                        exit 0
+                        ;;
+                b)
+                       	backup 
                         exit 0
                         ;;
 
