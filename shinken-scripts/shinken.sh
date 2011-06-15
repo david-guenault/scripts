@@ -155,6 +155,8 @@ function get_from_git(){
 	cd shinken
 	cecho "Switching to version $VERSION" green
 	git checkout $VERSION > /dev/null 2>&1
+	# clean up .git folder
+	rm -Rf .git
 }
 
 function relocate(){
