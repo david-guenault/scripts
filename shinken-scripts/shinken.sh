@@ -281,6 +281,27 @@ function backup(){
 	cecho "Not implemented yet" red
 }
 
+function compresslogs(){
+	trap 'trap_handler ${LINENO} $? compresslogs' ERR
+	cecho "Compress rotated logs" green
+	if [ ! -d $TARGET/var/archives ]
+	then
+		cecho ">>Archives directory not found" yellow
+		exit 0
+	fi
+	cd $TARGET/var/archives
+	for l in $TARGET/var/archives/*.log
+	do
+		file=$(basename $l)
+		if [ -e $file ]
+		then
+			cecho ">> Processing $file" green
+			tar czf $file.tar.gz $file
+			rm -f $file
+		fi
+	done
+}
+
 function usage(){
 echo "Usage : shinken -k | -i | -d
 	-k	Kill shinken
@@ -288,6 +309,7 @@ echo "Usage : shinken -k | -i | -d
 	-d 	Remove shinken
 	-u	Update an existing shinken installation
 	-b	Backup shinken configuration
+	-c	Compress rotated logs
 "
 
 }
@@ -302,7 +324,7 @@ fi
 
 cecho "Parsing arguments" green
 
-while getopts "kidub" opt; do
+while getopts "kidubc" opt; do
         case $opt in
                 k)
                         skill
@@ -324,7 +346,10 @@ while getopts "kidub" opt; do
                        	backup 
                         exit 0
                         ;;
-
+		c)
+			compresslogs
+			exit 0
+			;;
         esac
 done
 usage
