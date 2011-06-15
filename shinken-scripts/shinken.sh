@@ -132,18 +132,11 @@ function skill(){
 	
 	OLDIFS=$IFS
 	IFS=$'\n'
-
-
-	for p in $(ps -aef | grep "^shinken" | grep -v "npcd"|awk '{print $2}')
+	
+	for p in $(ps -aef | grep "$TARGET" | grep -v "grep" | awk '{print $2}')
 	do
 		kill -9 $p
 	done
-
-	for p in $(ps -aef | grep "shinken-arbiter -d" | grep -v "grep"| awk '{print $2}')
-	do
-		kill -9 $p
-	done
-
 
 	IFS=$OLDIFS
 	rm -Rf /tmp/bad_start*
