@@ -5,6 +5,7 @@ Usage : shinken -k | -i | -d
 	-k	Kill shinken
 	-i	Install shinken
 	-d 	Remove shinken
+	-c	Compress rotated logs
 
 You can modify the target folder by editing the shinken.conf file 
 
