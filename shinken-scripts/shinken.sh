@@ -159,17 +159,40 @@ function get_from_git(){
 	rm -Rf .git
 }
 
+function setdirectives(){
+	trap 'trap_handler ${LINENO} $? setdirectives' ERR
+	directives=$1
+	fic=$2
+	mpath=$3
+	
+	cecho ">>>>going to $mpath" green
+	cd $mpath
+
+	for pair in $directives
+	do
+		directive=$(echo $pair | awk -F= '{print $1}')
+		value=$(echo $pair | awk -F= '{print $2}')
+		cecho ">>>>setting $directive to $value in $fic" green
+		sed -i 's#^\# \?'$directive'=\(.*\)$#'$directive'='$value'#g' $mpath/etc/$(basename $fic)
+	done
+}
+
 function relocate(){
 	trap 'trap_handler ${LINENO} $? relocate' ERR
 	cecho "Relocate source tree to $TARGET" green
 	# relocate source tree
-	for fic in $(find . | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq); do cecho ">>Processing $fic" green; cp $fic $fic.orig ; sed -i 's#/usr/local/shinken#'$TARGET'#g' $fic ; done
-	# relocate also all module.ini files
+	for fic in $(find . | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq)
+	do 
+		cecho ">>Processing $fic" green
+		cp $fic $fic.orig 
+		sed -i 's#/usr/local/shinken#'$TARGET'#g' $fic 
+	done
+	# set some directives 
+	directives="workdir=$TARGET/var user=$SKUSER group=$SKGROUP"
 	for fic in ./etc/*.ini; 
 	do 
 		cecho ">>Processing $fic" green;
-		sed -i "s#workdir=.*#workdir=/opt/shinken/var#g" $fic  ; 
-		sed -i "1 s/^.*$/&\nworkdir=\/opt\/shinken\/var/g" $fic  ; 
+		setdirectives "$directives" $fic $TMP/shinken
 		cp -f $fic $TARGET/etc/; 
 	done
 	# relocate default file
