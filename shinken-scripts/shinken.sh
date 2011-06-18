@@ -243,6 +243,66 @@ function sinstall(){
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
 	fix
 }
+function backup(){
+	trap 'trap_handler ${LINENO} $? backup' ERR
+	cecho "Backup shinken configuration, plugins and data" green
+	skill
+	if [ ! -e $BACKUPDIR ]
+	then
+		mkdir $BACKUPDIR
+	fi
+	mkdir -p $BACKUPDIR/bck-shinken.$DATE
+	cp -Rfp $TARGET/etc $BACKUPDIR/bck-shinken.$DATE/
+	cp -Rfp $TARGET/libexec $BACKUPDIR/bck-shinken.$DATE/
+	cp -Rfp $TARGET/var $BACKUPDIR/bck-shinken.$DATE/
+}
+
+function backuplist(){
+	trap 'trap_handler ${LINENO} $? backuplist' ERR
+	cecho "List of available backups in $BACKUPDIR" green
+	for d in $(ls -1 $BACKUPDIR | grep "bck-shinken" | awk -F. '{print $2}')
+	do
+		echo " > $d"
+	done
+
+}
+
+function restore(){
+	trap 'trap_handler ${LINENO} $? restore' ERR
+	cecho "Restore shinken configuration, plugins and data" green
+	skill
+	if [ ! -e $BACKUPDIR ]
+	then
+		cecho "Backup folder not found" red
+		exit 2
+	fi
+	if [ -z $1 ]
+	then
+		cecho "No backup timestamp specified" red
+		backuplist
+		exit 2
+	fi
+	if [ ! -e $BACKUPDIR/bck-shinken.$1 ]
+	then
+		cecho "Backup not found : $BACKUPDIR/bck-shinken.$1 " red
+		backuplist
+		exit 2
+	fi
+	rm -Rf $TARGET/etc
+	rm -Rf $TARGET/libexec 
+	rm -Rf $TARGET/var 
+	cp -Rfp $BACKUPDIR/bck-shinken.$1/* $TARGET/
+}
+
+function supdate(){
+	trap 'trap_handler ${LINENO} $? update' ERR
+	cecho "Updating shinken" green
+	skill
+	backup
+	remove
+	sinstall
+	restore $DATE
+}
 
 function create_user(){
 	trap 'trap_handler ${LINENO} $? create_user' ERR
@@ -292,18 +352,6 @@ function prerequisites(){
 	done
 }
 
-function update(){
-	trap 'trap_handler ${LINENO} $? update' ERR
-	cecho "Updating shinken" green
-	cecho "Not implemented yet" red
-}
-
-function backup(){
-	trap 'trap_handler ${LINENO} $? backup' ERR
-	cecho "Backup shinken" green
-	cecho "Not implemented yet" red
-}
-
 function compresslogs(){
 	trap 'trap_handler ${LINENO} $? compresslogs' ERR
 	cecho "Compress rotated logs" green
@@ -326,12 +374,14 @@ function compresslogs(){
 }
 
 function usage(){
-echo "Usage : shinken -k | -i | -d
+echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c 
 	-k	Kill shinken
 	-i	Install shinken
 	-d 	Remove shinken
 	-u	Update an existing shinken installation
-	-b	Backup shinken configuration
+	-b	Backup shinken configuration plugins and data
+	-r 	Restore shinken configuration plugins and data
+	-l	List shinken backups
 	-c	Compress rotated logs
 "
 
@@ -345,9 +395,7 @@ then
         exit 1
 fi
 
-cecho "Parsing arguments" green
-
-while getopts "kidubc" opt; do
+while getopts "kidubcr:l" opt; do
         case $opt in
                 k)
                         skill
@@ -362,11 +410,19 @@ while getopts "kidubc" opt; do
                         exit 0
                         ;;
                 u)
-                       	update 
+                       	supdate 
                         exit 0
                         ;;
                 b)
                        	backup 
+                        exit 0
+                        ;;
+                r)
+                       	restore $OPTARG 
+                        exit 0
+                        ;;
+                l)
+                       	backuplist 
                         exit 0
                         ;;
 		c)
