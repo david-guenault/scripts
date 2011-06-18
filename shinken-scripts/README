@@ -3,10 +3,14 @@
 This is a really simple script allowing to install a fully fonctionnal shinken in seconds !
 Curently only tested with Ubuntu/Debian distros
 
-Usage : shinken -k | -i | -d
+Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c 
 	-k	Kill shinken
 	-i	Install shinken
 	-d 	Remove shinken
+	-u	Update an existing shinken installation
+	-b	Backup shinken configuration plugins and data
+	-r 	Restore shinken configuration plugins and data
+	-l	List shinken backups
 	-c	Compress rotated logs
 
 You can modify the target folder by editing the shinken.conf file 
