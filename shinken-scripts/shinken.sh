@@ -290,7 +290,7 @@ function compresslogs(){
 		exit 0
 	fi
 	cd $TARGET/var/archives
-	for l in $TARGET/var/archives/*.log
+	for l in $(ls -1 ./*.log)
 	do
 		file=$(basename $l)
 		if [ -e $file ]
