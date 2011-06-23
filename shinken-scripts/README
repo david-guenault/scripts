@@ -1,4 +1,22 @@
-=== WARNING : THIS SCRIPT IS STILL IN ALPHA ===
+===== WARNING : THIS SCRIPT IS STILL IN ALPHA =====
+
+==== Note for CentOS users ====
+
+you will need to install git on your server. 
+
+Get and install this package for adding rpmforge repositories : 
+
+  * For Centos 5.x 32bits : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.i386.rpm
+  * For Centos 5.x 64bts : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.x86_64.rpm
+
+Then install git with : yum install Git
+
+==== Note for Ubuntu/Debian users ====
+
+you will need to install git on your server. Just execute the following command : sudo apt-get install git-core
+
+
+==== Usage ====
 
 This is a really simple script allowing to install a fully fonctionnal shinken in seconds !
 Curently only tested with Ubuntu/Debian distros
@@ -12,6 +30,8 @@ Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c
 	-r 	Restore shinken configuration plugins and data
 	-l	List shinken backups
 	-c	Compress rotated logs
+
+==== configuration file ====
 
 You can modify the target folder by editing the shinken.conf file 
 
