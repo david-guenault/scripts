@@ -97,16 +97,18 @@ cecho ()
 }
 
 function check_distro(){
-	trap 'trap_handler ${LINENO} $? check_distro' ERR
+	#trap 'trap_handler ${LINENO} $? check_distro' ERR
 	cecho "Verifying compatible distros" green
-	DIST=$(cat /etc/issue | awk '{print $1}')
+
+	DIST=$(cat /etc/issue | head -n 1 | sed -e "s/ /_/g")
 	DISTRO=""
 	for d in $DISTROS
 	do
-		if [ "$d" = "$DIST" ]
+		match=$(echo $DIST | grep $d)
+		if [ ! -z "$match" ]
 		then
-			cecho ">>Found $DIST" green
-			export DISTRO=$DIST
+			export DISTRO=$(echo $DIST | sed -e "s/_/ /g")
+			cecho ">>Found $DISTRO" green
 		fi
 	done
 	if [ -z "$DISTRO" ]
@@ -395,8 +397,12 @@ then
         exit 1
 fi
 
-while getopts "kidubcr:l" opt; do
+while getopts "kidubcr:lz" opt; do
         case $opt in
+		z)
+			check_distro
+			exit 0
+			;;
                 k)
                         skill
                         exit 0
