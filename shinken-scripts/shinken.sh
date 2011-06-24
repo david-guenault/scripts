@@ -248,16 +248,21 @@ function enable(){
 	trap 'trap_handler ${LINENO} $? enable' ERR
 	cecho "Enabling startup scripts" green
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
-        case $DISTRO in
-                Ubuntu)
-			update-rc.d shinken defaults 
-                        exit 0
-                        ;;
-                Debian)
-			update-rc.d shinken defaults 
-                        exit 0
-                        ;;
-        esac
+	case $DISTRO in
+		Centos)
+			cecho "Enabling centos startup script" green
+			chkconfig shinken on
+			chkconfig --add shinken
+			;;
+		Debian)
+			cecho "Enabling debian startup script" green
+			update-rc.d shinken defaults > /dev/null 2>&1
+			;;
+		Ubuntu)
+			cecho "Enabling ubuntu startup script" green
+			update-rc.d shinken defaults > /dev/null 2>&1
+			;;
+	esac    
 }
 
 function sinstall(){
@@ -404,8 +409,37 @@ function compresslogs(){
 	done
 }
 
-function usage(){
-echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c 
+function shelp(){
+echo "
+===== WARNING : THIS SCRIPT IS STILL IN ALPHA =====
+
+==== Note for CentOS users ====
+
+you will need to install git and pyro on your server. 
+
+Get and install this package for adding rpmforge repositories : 
+
+  * For Centos 5.x 32bits : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.i386.rpm
+  * For Centos 5.x 64bts : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.x86_64.rpm
+
+Then install git with : yum install Git
+Install Also python-setuptools : yum install python-setuptools
+Then use easy-install to get pyro : easy_install pyro
+
+==== Note for Ubuntu/Debian users ====
+
+you will need to install git and pyro on your server. Just execute the following command : sudo apt-get install git-core pyro
+
+==== get the scripts ====
+
+git clone http://github.com/david-guenault/scripts.git
+
+==== Usage ====
+
+This is a really simple script allowing to install a fully fonctionnal shinken in seconds !
+Curently only tested with Ubuntu/Debian distros
+
+Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c 
 	-k	Kill shinken
 	-i	Install shinken
 	-d 	Remove shinken
@@ -414,6 +448,36 @@ echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c
 	-r 	Restore shinken configuration plugins and data
 	-l	List shinken backups
 	-c	Compress rotated logs
+
+==== configuration file ====
+
+You can modify the target folder by editing the shinken.conf file 
+
+#!/bin/bash
+export TMP=/tmp
+export VERSION=\"0.6.4\"
+export TARGET=/opt/shinken
+export BACKUPDIR=\"/opt/backup\"
+export SKUSER=shinken
+export SKGROUP=shinken
+# DO NOT MODIFY THIS EXCEPT IF YOU TESTED A WORKING DISTRO NOT LISTED HERE !
+export DISTROS=\"Ubuntu Debian\"
+export DATE=$(date +%Y%m%d%H%M%S)
+export GIT=\"https://github.com/naparuba/shinken.git\"
+"
+}
+
+function usage(){
+echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h 
+	-k	Kill shinken
+	-i	Install shinken
+	-d 	Remove shinken
+	-u	Update an existing shinken installation
+	-b	Backup shinken configuration plugins and data
+	-r 	Restore shinken configuration plugins and data
+	-l	List shinken backups
+	-c	Compress rotated logs
+	-h	Show help
 "
 
 }
@@ -426,7 +490,7 @@ then
         exit 1
 fi
 
-while getopts "kidubcr:lz" opt; do
+while getopts "kidubcr:lzh" opt; do
         case $opt in
 		z)
 			check_distro
@@ -462,6 +526,10 @@ while getopts "kidubcr:lz" opt; do
                         ;;
 		c)
 			compresslogs
+			exit 0
+			;;
+		h)
+			shelp	
 			exit 0
 			;;
         esac
