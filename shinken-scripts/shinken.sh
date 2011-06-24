@@ -150,8 +150,8 @@ function remove(){
                                 update-rc.d -f shinken remove > /dev/null 2>&1
                                 ;;
                 esac    
-                rm -f /etc/init.d/shinken
         fi
+	rm -f /etc/init.d/shinken*
 
 	return 0
 }
