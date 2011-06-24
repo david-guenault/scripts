@@ -107,8 +107,10 @@ function check_distro(){
 		match=$(echo $DIST | grep $d)
 		if [ ! -z "$match" ]
 		then
-			export DISTRO=$(echo $DIST | sed -e "s/_/ /g")
+			#export DISTRO=$(echo $DIST | sed -e "s/_/ /g")
+			export DISTRO=$d
 			cecho ">>Found $DISTRO" green
+			return 0
 		fi
 	done
 	if [ -z "$DISTRO" ]
@@ -122,10 +124,36 @@ function remove(){
 	trap 'trap_handler ${LINENO} $? remove' ERR
 	cecho "Removing shinken" green
 	skill
-	rm -Rf $TARGET
-	rm -Rf /etc/default/shinken
-	sudo update-rc.d -f shinken remove > /dev/null 2>&1
-	rm -Rf /etc/init.d/shinken
+	
+	if [ -d "$TARGET" ]
+	then 
+		rm -Rf $TARGET 
+	fi
+	if [ -h "/etc/default/shinken" ]
+	then 
+		rm -Rf /etc/default/shinken 
+	fi
+	if [ -f "/etc/init.d/shinken" ]
+        then
+                case $DISTRO in
+                        Centos)
+				cecho "Removing centos startup script" green
+                                chkconfig shinken off
+                                chkconfig --del shinken
+                                ;;
+                        Debian)
+				cecho "Removing debian startup script" green
+                                update-rc.d -f shinken remove > /dev/null 2>&1
+                                ;;
+                        Ubuntu)
+				cecho "Removing ubuntu startup script" green
+                                update-rc.d -f shinken remove > /dev/null 2>&1
+                                ;;
+                esac    
+                rm -f /etc/init.d/shinken
+        fi
+
+	return 0
 }
 
 function skill(){
@@ -135,7 +163,7 @@ function skill(){
 	OLDIFS=$IFS
 	IFS=$'\n'
 	
-	for p in $(ps -aef | grep "$TARGET" | grep -v "grep" | awk '{print $2}')
+	for p in $(ps -aef | grep -q "$TARGET" | grep -vq "grep" | awk '{print $2}')
 	do
 		kill -9 $p
 	done
@@ -143,17 +171,18 @@ function skill(){
 	IFS=$OLDIFS
 	rm -Rf /tmp/bad_start*
 	rm -Rf $TARGET/var/*.pid
+	return 0
 }
 
 function get_from_git(){
 	trap 'trap_handler ${LINENO} $? get_from_git' ERR
 	cecho "Getting shinken" green
 	cd $TMP
-	if [ -e shinken ]
+	if [ -e "shinken" ]
 	then
 		rm -Rf shinken
 	fi
-	git clone $GIT > /dev/null 2>&1
+	env GIT_SSL_NO_VERIFY=true git clone $GIT > /dev/null 2>&1
 	cd shinken
 	cecho "Switching to version $VERSION" green
 	git checkout $VERSION > /dev/null 2>&1
