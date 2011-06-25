@@ -13,6 +13,20 @@ Then install git with : yum install Git
 Install Also python-setuptools : yum install python-setuptools
 Then use easy-install to get pyro : easy_install pyro
 
+==== Note for RedHat users ====
+
+you will need to install git and pyro on your server. 
+
+Get and install this package for adding rpmforge repositories : 
+
+  * For RedHat 5.x 32bits : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.i386.rpm
+  * For RedHat 5.x 64bts : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.x86_64.rpm
+
+Then install git with : yum install Git
+Install Also python-setuptools : yum install python-setuptools
+Then use easy-install to get pyro : easy_install pyro
+
+
 ==== Note for Ubuntu/Debian users ====
 
 you will need to install git and pyro on your server. Just execute the following command : sudo apt-get install git-core pyro
