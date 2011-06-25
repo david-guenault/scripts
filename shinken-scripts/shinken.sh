@@ -106,33 +106,13 @@ function check_distro(){
 		exit 2
 	fi
 
-	export CODE=""
-
-	DIST=$(/usr/bin/lsb_release -i | awk '{print $NF}')
-	VERS=$(/usr/bin/lsb_release -r | awk '{print $NF}' | awk -F. '{print $1}')
-
-
-	for s in $DISTROS
-	do
-		# try distribution and release
-		if [ "$DIST$VERS"="$s" ]
-		then
-			export CODE=$DIST
-			cecho " Found : $DIST $VERS" yellow
-			return 
-		else
-			# try on distribution only
-			if [ "$DIST"="$s" ]
-			then
-				export CODE=$DIST
-				cecho " Found $DIST" yellow
-				return
-			fi
-		fi
-	done
-
-	cecho "No compatible distribution found" red
-	exit 2
+	if [ -z $CODE ]
+	then
+		cecho "No compatible distribution found" red
+		exit 2
+	else
+		cecho "Found $DIST $VERS" green
+	fi
 }
 
 function remove(){
@@ -151,21 +131,12 @@ function remove(){
 	if [ -f "/etc/init.d/shinken" ]
         then
                 case $CODE in
-                        CentOS)
+                        REDHAT)
 				cecho "Removing startup script" green
                                 chkconfig shinken off
                                 chkconfig --del shinken
                                 ;;
-                        RedHatEnterpriseServer)
-				cecho "Removing startup script" green
-                                chkconfig shinken off
-                                chkconfig --del shinken
-                                ;;
-                        Debian)
-				cecho "Removing startup script" green
-                                update-rc.d -f shinken remove > /dev/null 2>&1
-                                ;;
-                        Ubuntu)
+                        DEBIAN)
 				cecho "Removing startup script" green
                                 update-rc.d -f shinken remove > /dev/null 2>&1
                                 ;;
@@ -273,22 +244,13 @@ function enable(){
 	cecho "Enabling startup scripts" green
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
 	case $DISTRO in
-		Centos)
-			cecho "Enabling centos startup script" green
-			chkconfig shinken on
+		REDHAT)
+			cecho "Enabling $DIST startup script" 
 			chkconfig --add shinken
-			;;
-		RedHatEnterpriseServer)
-			cecho "Enabling centos startup script" green
 			chkconfig shinken on
-			chkconfig --add shinken
 			;;
-		Debian)
-			cecho "Enabling debian startup script" green
-			update-rc.d shinken defaults > /dev/null 2>&1
-			;;
-		Ubuntu)
-			cecho "Enabling ubuntu startup script" green
+		DEBIAN)
+			cecho "Enabling $DIST startup script" green
 			update-rc.d shinken defaults > /dev/null 2>&1
 			;;
 	esac    
@@ -307,7 +269,6 @@ function sinstall(){
 	ln -s $TARGET/bin/default/shinken /etc/default/shinken
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
 	fix
-	enable
 }
 function backup(){
 	trap 'trap_handler ${LINENO} $? backup' ERR
@@ -367,8 +328,6 @@ function supdate(){
 	backup
 	remove
 	sinstall
-	fix
-	enable
 	restore $DATE
 }
 
@@ -405,19 +364,98 @@ function check_exist(){
 
 }
 
+function installpkg(){
+	type=$1
+	package=$2
+
+	if [ "$type" == "python" ]
+	then
+		easy_install $package > /dev/null 2>&1
+		return $?
+	fi
+
+	case $CODE in 
+		REDHAT)
+			yum install -yq $package > /dev/null 2>&1
+			if [ $? -ne 0 ]
+			then
+				return 2
+			fi
+			;;
+		DEBIAN)
+			apt-get install -y $package > /dev/null 2>&1
+			if [ $? -ne 0 ]
+			then
+				return 2
+			fi
+			;;
+	esac	
+	return 0
+}
+
 function prerequisites(){
-	trap 'trap_handler ${LINENO} $? prerequisite' ERR
 	cecho "Checking prerequisite" green
-	prereq="python pyro-nsc wget git"
-	for p in $prereq
+	# common prereq
+	bins="wget sed awk grep git python bash"
+
+	for b in $bins
 	do
-		if [ -z "$(which $p)" ]
+		rb=$(which $b > /dev/null 2>&1)
+		if [ $? -eq 0 ]
 		then
-			cecho ">>prerequisite $p not found !" red
-			cecho ">>prerequisites are : $prereq" red
-			exit 2	
+			cecho "Checking for $b : OK" green
+		else
+			cecho "Checking for $b : NOT FOUND" red
+			exit 2 
+		fi	
+	done
+
+	# distro prereq
+	case $CODE in
+		REDHAT)
+			PACKAGES=$YUMPKGS
+			QUERY="rpm -q "
+			cd $TMP
+			$QUERY $RPMFORGENAME > /dev/null 2>&1
+			if [ $? -ne 0 ]
+			then
+				cecho "Installing $RPMFORGEPKG" green
+				wget $RPMFORGE > /dev/null 2>&1 
+				if [ $? -ne 0 ]
+				then
+					cecho "Error while trying to download rpm forge repositories" red 
+					exit 2
+				fi
+				rpm -Uvh ./$RPMFORGEPKG > /dev/null 2>&1
+			else
+				cecho "$RPMFORGEPKG allready installed" green 
+			fi
+			;;
+		DEBIAN)
+			PACKAGES=$APTPKGS
+			QUERY="dpkg -l "
+			;;
+	esac
+	for p in $PACKAGES
+	do
+		$QUERY $p > /dev/null 2>&1
+		if [ $? -ne 0 ]
+		then
+			cecho " > Package $p not installed" yellow
+			cecho " > Installing $p " yellow
+			installpkg pkg $p 
+			if [ $? -ne 0 ]
+			then 
+				cecho " > Error while trying to install $p" red 
+				exit 2 	
+			fi
+		else
+			cecho " > Package $p allready installed " yellow
 		fi
 	done
+	# python prereq
+	
+	
 }
 
 function compresslogs(){
