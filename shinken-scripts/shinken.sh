@@ -177,18 +177,22 @@ function remove(){
 }
 
 function skill(){
-	trap 'trap_handler ${LINENO} $? skill' ERR
+	cecho "Try to stop shinken the right way" green
+	/etc/init.d/shinken stop > /dev/null 2>&1
 	cecho "Killing shinken" green
-	
-	OLDIFS=$IFS
-	IFS=$'\n'
-	
-	for p in $(ps -aef | grep -q "$TARGET" | grep -vq "grep" | awk '{print $2}')
-	do
-		kill -9 $p
-	done
+	pc=$(ps -aef | grep "$TARGET" | grep -v "grep" | wc -l )
+	if [ $pc -ne 0 ]
+	then	
+		OLDIFS=$IFS
+		IFS=$'\n'
+		
+		for p in $(ps -aef | grep -q "$TARGET" | grep -vq "grep" | awk '{print $2}')
+		do
+			kill -9 $p
+		done
 
-	IFS=$OLDIFS
+		IFS=$OLDIFS
+	fi
 	rm -Rf /tmp/bad_start*
 	rm -Rf $TARGET/var/*.pid
 	return 0
