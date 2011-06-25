@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash 
 
 # environnement
 myscripts=$(dirname $0)
@@ -97,27 +97,42 @@ cecho ()
 }
 
 function check_distro(){
-	#trap 'trap_handler ${LINENO} $? check_distro' ERR
+	trap 'trap_handler ${LINENO} $? check_distro' ERR
 	cecho "Verifying compatible distros" green
 
-	DIST=$(cat /etc/issue | head -n 1 | sed -e "s/ /_/g")
-	DISTRO=""
-	for d in $DISTROS
-	do
-		match=$(echo $DIST | grep $d)
-		if [ ! -z "$match" ]
-		then
-			#export DISTRO=$(echo $DIST | sed -e "s/_/ /g")
-			export DISTRO=$d
-			cecho ">>Found $DISTRO" green
-			return 0
-		fi
-	done
-	if [ -z "$DISTRO" ]
-	then
-		cecho ">>No compatible distro found" red
+	if [ ! -e /usr/bin/lsb_release ]
+	then	
+		echo "No compatible distribution found"
 		exit 2
 	fi
+
+	export CODE=""
+
+	DIST=$(/usr/bin/lsb_release -i | awk '{print $NF}')
+	VERS=$(/usr/bin/lsb_release -r | awk '{print $NF}' | awk -F. '{print $1}')
+
+
+	for s in $DISTROS
+	do
+		# try distribution and release
+		if [ "$DIST$VERS"="$s" ]
+		then
+			export CODE=$DIST
+			cecho " Found : $DIST $VERS" yellow
+			return 
+		else
+			# try on distribution only
+			if [ "$DIST"="$s" ]
+			then
+				export CODE=$DIST
+				cecho " Found $DIST" yellow
+				return
+			fi
+		fi
+	done
+
+	cecho "No compatible distribution found" red
+	exit 2
 }
 
 function remove(){
@@ -135,18 +150,23 @@ function remove(){
 	fi
 	if [ -f "/etc/init.d/shinken" ]
         then
-                case $DISTRO in
-                        Centos)
-				cecho "Removing centos startup script" green
+                case $CODE in
+                        CentOS)
+				cecho "Removing startup script" green
+                                chkconfig shinken off
+                                chkconfig --del shinken
+                                ;;
+                        RedHatEnterpriseServer)
+				cecho "Removing startup script" green
                                 chkconfig shinken off
                                 chkconfig --del shinken
                                 ;;
                         Debian)
-				cecho "Removing debian startup script" green
+				cecho "Removing startup script" green
                                 update-rc.d -f shinken remove > /dev/null 2>&1
                                 ;;
                         Ubuntu)
-				cecho "Removing ubuntu startup script" green
+				cecho "Removing startup script" green
                                 update-rc.d -f shinken remove > /dev/null 2>&1
                                 ;;
                 esac    
@@ -410,61 +430,7 @@ function compresslogs(){
 }
 
 function shelp(){
-echo "
-===== WARNING : THIS SCRIPT IS STILL IN ALPHA =====
-
-==== Note for CentOS users ====
-
-you will need to install git and pyro on your server. 
-
-Get and install this package for adding rpmforge repositories : 
-
-  * For Centos 5.x 32bits : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.i386.rpm
-  * For Centos 5.x 64bts : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.x86_64.rpm
-
-Then install git with : yum install Git
-Install Also python-setuptools : yum install python-setuptools
-Then use easy-install to get pyro : easy_install pyro
-
-==== Note for Ubuntu/Debian users ====
-
-you will need to install git and pyro on your server. Just execute the following command : sudo apt-get install git-core pyro
-
-==== get the scripts ====
-
-git clone http://github.com/david-guenault/scripts.git
-
-==== Usage ====
-
-This is a really simple script allowing to install a fully fonctionnal shinken in seconds !
-Curently only tested with Ubuntu/Debian distros
-
-Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c 
-	-k	Kill shinken
-	-i	Install shinken
-	-d 	Remove shinken
-	-u	Update an existing shinken installation
-	-b	Backup shinken configuration plugins and data
-	-r 	Restore shinken configuration plugins and data
-	-l	List shinken backups
-	-c	Compress rotated logs
-
-==== configuration file ====
-
-You can modify the target folder by editing the shinken.conf file 
-
-#!/bin/bash
-export TMP=/tmp
-export VERSION=\"0.6.4\"
-export TARGET=/opt/shinken
-export BACKUPDIR=\"/opt/backup\"
-export SKUSER=shinken
-export SKGROUP=shinken
-# DO NOT MODIFY THIS EXCEPT IF YOU TESTED A WORKING DISTRO NOT LISTED HERE !
-export DISTROS=\"Ubuntu Debian\"
-export DATE=$(date +%Y%m%d%H%M%S)
-export GIT=\"https://github.com/naparuba/shinken.git\"
-"
+	cat $myscripts/README
 }
 
 function usage(){

@@ -16,6 +16,10 @@ Then install git with :
 Install Also python-setuptools : 
   yum install python-setuptools
 
+Install python multiprocessing
+  yum install gcc
+  easy_install multiprocessing
+
 Get and install pyro 3.12
   easy_install http://pypi.python.org/packages/source/P/Pyro/Pyro-3.12.tar.gz
 
