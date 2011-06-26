@@ -278,6 +278,11 @@ function enable(){
 			chkconfig shinken on
 			chkconfig --add shinken
 			;;
+		RedHatEnterpriseServer)
+			cecho "Enabling centos startup script" green
+			chkconfig shinken on
+			chkconfig --add shinken
+			;;
 		Debian)
 			cecho "Enabling debian startup script" green
 			update-rc.d shinken defaults > /dev/null 2>&1
@@ -302,6 +307,7 @@ function sinstall(){
 	ln -s $TARGET/bin/default/shinken /etc/default/shinken
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
 	fix
+	enable
 }
 function backup(){
 	trap 'trap_handler ${LINENO} $? backup' ERR
@@ -361,6 +367,8 @@ function supdate(){
 	backup
 	remove
 	sinstall
+	fix
+	enable
 	restore $DATE
 }
 
