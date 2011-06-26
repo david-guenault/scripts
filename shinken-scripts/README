@@ -1,25 +1,5 @@
 ===== WARNING : THIS SCRIPT IS STILL IN ALPHA =====
 
-==== Note for CentOS/RedHat users ====
-
-Get and install this package for adding rpmforge repositories : 
-
-  * For Centos/RedHat 5.x 32bits : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.i386.rpm
-  * For Centos/RedHat 5.x 64bts : http://packages.sw.be/rpmforge-release/rpmforge-release-0.5.2-2.el5.rf.x86_64.rpm
-
-Install binaries prerequisites :
-  yum install Git gcc sqlite-devel python-devel python-setuptools
-
-Install python libraries prerequisites :
-  easy_install multiprocessing
-  easy_install pysqlite
-  easy_install simplejson
-  easy_install http://pypi.python.org/packages/source/P/Pyro/Pyro-3.12.tar.gz
-
-==== Note for Ubuntu/Debian users ====
-
-you will need to install git and pyro on your server. Just execute the following command : sudo apt-get install git-core pyro
-
 ==== get the scripts ====
 
 git clone http://github.com/david-guenault/scripts.git
