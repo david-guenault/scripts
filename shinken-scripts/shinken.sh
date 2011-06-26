@@ -96,6 +96,13 @@ cecho ()
         return
 }
 
+function cadre(){
+	cecho "+--------------------------------------------------------------------------------" $2
+	cecho "| $1" $2
+	cecho "+--------------------------------------------------------------------------------" $2
+}
+
+
 function check_distro(){
 	trap 'trap_handler ${LINENO} $? check_distro' ERR
 	cecho "Verifying compatible distros" green
@@ -191,25 +198,25 @@ function setdirectives(){
 	fic=$2
 	mpath=$3
 	
-	cecho ">>>>going to $mpath" green
+	#cecho ">>>>going to $mpath" green
 	cd $mpath
 
 	for pair in $directives
 	do
 		directive=$(echo $pair | awk -F= '{print $1}')
 		value=$(echo $pair | awk -F= '{print $2}')
-		cecho ">>>>setting $directive to $value in $fic" green
+		#cecho ">>>>setting $directive to $value in $fic" green
 		sed -i 's#^\# \?'$directive'=\(.*\)$#'$directive'='$value'#g' $mpath/etc/$(basename $fic)
 	done
 }
 
 function relocate(){
 	trap 'trap_handler ${LINENO} $? relocate' ERR
-	cecho "Relocate source tree to $TARGET" green
+	cadre "Relocate source tree to $TARGET" green
 	# relocate source tree
 	for fic in $(find . | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq)
 	do 
-		cecho ">>Processing $fic" green
+		cecho " > Processing $fic" green
 		cp $fic $fic.orig 
 		sed -i 's#/usr/local/shinken#'$TARGET'#g' $fic 
 	done
@@ -217,7 +224,7 @@ function relocate(){
 	directives="workdir=$TARGET/var user=$SKUSER group=$SKGROUP"
 	for fic in ./etc/*.ini; 
 	do 
-		cecho ">>Processing $fic" green;
+		cecho " > Processing $fic" green;
 		setdirectives "$directives" $fic $TMP/shinken
 		cp -f $fic $TARGET/etc/; 
 	done
@@ -232,7 +239,7 @@ function relocate(){
 
 function fix(){
 	trap 'trap_handler ${LINENO} $? fix' ERR
-	cecho "Applying various fixes" green
+	cadre "Applying various fixes" green
 	chmod +x /etc/init.d/shinken
 	chmod +x /etc/default/shinken
 	chmod +x $TARGET/bin/init.d/shinken
@@ -241,7 +248,7 @@ function fix(){
 
 function enable(){
 	trap 'trap_handler ${LINENO} $? enable' ERR
-	cecho "Enabling startup scripts" green
+	cadre "Enabling startup scripts" green
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
 	case $DISTRO in
 		REDHAT)
@@ -394,7 +401,7 @@ function installpkg(){
 }
 
 function prerequisites(){
-	cecho "Checking prerequisite" green
+	cadre "Checking prerequisite" green
 	# common prereq
 	bins="wget sed awk grep git python bash"
 
@@ -403,9 +410,9 @@ function prerequisites(){
 		rb=$(which $b > /dev/null 2>&1)
 		if [ $? -eq 0 ]
 		then
-			cecho "Checking for $b : OK" green
+			cecho " > Checking for $b : OK" yellow
 		else
-			cecho "Checking for $b : NOT FOUND" red
+			cecho " > Checking for $b : NOT FOUND" red
 			exit 2 
 		fi	
 	done
@@ -419,16 +426,16 @@ function prerequisites(){
 			$QUERY $RPMFORGENAME > /dev/null 2>&1
 			if [ $? -ne 0 ]
 			then
-				cecho "Installing $RPMFORGEPKG" green
+				cecho " > Installing $RPMFORGEPKG" yellow
 				wget $RPMFORGE > /dev/null 2>&1 
 				if [ $? -ne 0 ]
 				then
-					cecho "Error while trying to download rpm forge repositories" red 
+					cecho " > Error while trying to download rpm forge repositories" red 
 					exit 2
 				fi
 				rpm -Uvh ./$RPMFORGEPKG > /dev/null 2>&1
 			else
-				cecho "$RPMFORGEPKG allready installed" green 
+				cecho " > $RPMFORGEPKG allready installed" yellow 
 			fi
 			;;
 		DEBIAN)
