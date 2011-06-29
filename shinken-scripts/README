@@ -2,11 +2,9 @@
 
 ==== get the scripts ====
 
-git clone http://github.com/david-guenault/scripts.git
+wget --no-check-certificate https://github.com/david-guenault/scripts/tarball/master
 
-on RedHat/CentOS it seems that there is a problem with SSL and Git so the command is 
-
-env GIT_SSL_NO_VERIFY=true git clone http://github.com/david-guenault/scripts.git
+extraire l'archive et se placer dans le repertoire shinken-scripts
 
 ==== Usage ====
 
