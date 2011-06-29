@@ -105,26 +105,26 @@ function cadre(){
 
 function check_distro(){
 	trap 'trap_handler ${LINENO} $? check_distro' ERR
-	cecho "Verifying compatible distros" green
+	cadre "Verifying compatible distros" green
 
 	if [ ! -e /usr/bin/lsb_release ]
 	then	
-		echo "No compatible distribution found"
+		cecho " > No compatible distribution found" red
 		exit 2
 	fi
 
 	if [ -z $CODE ]
 	then
-		cecho "No compatible distribution found" red
+		cecho " > No compatible distribution found" red
 		exit 2
 	else
-		cecho "Found $DIST $VERS" green
+		cecho " > Found $DIST $VERS" yellow 
 	fi
 }
 
 function remove(){
 	trap 'trap_handler ${LINENO} $? remove' ERR
-	cecho "Removing shinken" green
+	cadre "Removing shinken" green
 	skill
 	
 	if [ -d "$TARGET" ]
@@ -139,12 +139,12 @@ function remove(){
         then
                 case $CODE in
                         REDHAT)
-				cecho "Removing startup script" green
+				cecho " > Removing startup script" green
                                 chkconfig shinken off
                                 chkconfig --del shinken
                                 ;;
                         DEBIAN)
-				cecho "Removing startup script" green
+				cecho " > Removing startup script" green
                                 update-rc.d -f shinken remove > /dev/null 2>&1
                                 ;;
                 esac    
@@ -155,9 +155,9 @@ function remove(){
 }
 
 function skill(){
-	cecho "Try to stop shinken the right way" green
+	#cecho "Try to stop shinken the right way" green
 	/etc/init.d/shinken stop > /dev/null 2>&1
-	cecho "Killing shinken" green
+	#cecho "Killing shinken" green
 	pc=$(ps -aef | grep "$TARGET" | grep -v "grep" | wc -l )
 	if [ $pc -ne 0 ]
 	then	
@@ -178,7 +178,7 @@ function skill(){
 
 function get_from_git(){
 	trap 'trap_handler ${LINENO} $? get_from_git' ERR
-	cecho "Getting shinken" green
+	cadre "Getting shinken" green
 	cd $TMP
 	if [ -e "shinken" ]
 	then
@@ -186,7 +186,7 @@ function get_from_git(){
 	fi
 	env GIT_SSL_NO_VERIFY=true git clone $GIT > /dev/null 2>&1
 	cd shinken
-	cecho "Switching to version $VERSION" green
+	cecho " > Switching to version $VERSION" green
 	git checkout $VERSION > /dev/null 2>&1
 	# clean up .git folder
 	rm -Rf .git
@@ -252,12 +252,12 @@ function enable(){
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
 	case $DISTRO in
 		REDHAT)
-			cecho "Enabling $DIST startup script" 
+			cecho " > Enabling $DIST startup script" green
 			chkconfig --add shinken
 			chkconfig shinken on
 			;;
 		DEBIAN)
-			cecho "Enabling $DIST startup script" green
+			cecho " > Enabling $DIST startup script" green
 			update-rc.d shinken defaults > /dev/null 2>&1
 			;;
 	esac    
@@ -265,7 +265,7 @@ function enable(){
 
 function sinstall(){
 	trap 'trap_handler ${LINENO} $? install' ERR
-	cecho "Installing shinken" green
+	#cecho "Installing shinken" green
 	check_distro
 	check_exist
 	prerequisites
@@ -279,7 +279,7 @@ function sinstall(){
 }
 function backup(){
 	trap 'trap_handler ${LINENO} $? backup' ERR
-	cecho "Backup shinken configuration, plugins and data" green
+	cadre "Backup shinken configuration, plugins and data" green
 	skill
 	if [ ! -e $BACKUPDIR ]
 	then
@@ -289,36 +289,37 @@ function backup(){
 	cp -Rfp $TARGET/etc $BACKUPDIR/bck-shinken.$DATE/
 	cp -Rfp $TARGET/libexec $BACKUPDIR/bck-shinken.$DATE/
 	cp -Rfp $TARGET/var $BACKUPDIR/bck-shinken.$DATE/
+	cecho " > Backup done. Id is $DATE"
 }
 
 function backuplist(){
 	trap 'trap_handler ${LINENO} $? backuplist' ERR
-	cecho "List of available backups in $BACKUPDIR" green
+	cadre "List of available backups in $BACKUPDIR" green
 	for d in $(ls -1 $BACKUPDIR | grep "bck-shinken" | awk -F. '{print $2}')
 	do
-		echo " > $d"
+		cecho " > $d" green
 	done
 
 }
 
 function restore(){
 	trap 'trap_handler ${LINENO} $? restore' ERR
-	cecho "Restore shinken configuration, plugins and data" green
+	cadre "Restore shinken configuration, plugins and data" green
 	skill
 	if [ ! -e $BACKUPDIR ]
 	then
-		cecho "Backup folder not found" red
+		cecho " > Backup folder not found" red
 		exit 2
 	fi
 	if [ -z $1 ]
 	then
-		cecho "No backup timestamp specified" red
+		cecho " > No backup timestamp specified" red
 		backuplist
 		exit 2
 	fi
 	if [ ! -e $BACKUPDIR/bck-shinken.$1 ]
 	then
-		cecho "Backup not found : $BACKUPDIR/bck-shinken.$1 " red
+		cecho " > Backup not found : $BACKUPDIR/bck-shinken.$1 " red
 		backuplist
 		exit 2
 	fi
@@ -326,11 +327,12 @@ function restore(){
 	rm -Rf $TARGET/libexec 
 	rm -Rf $TARGET/var 
 	cp -Rfp $BACKUPDIR/bck-shinken.$1/* $TARGET/
+	cecho " > Restauration done" green
 }
 
 function supdate(){
 	trap 'trap_handler ${LINENO} $? update' ERR
-	cecho "Updating shinken" green
+	cadre "Updating shinken" green
 	skill
 	backup
 	remove
@@ -340,10 +342,10 @@ function supdate(){
 
 function create_user(){
 	trap 'trap_handler ${LINENO} $? create_user' ERR
-	cecho "Creating user" green
+	cadre "Creating user" green
 	if [ ! -z "$(cat /etc/passwd | grep $SKUSER)" ] 
 	then
-		cecho ">>User $SKUSER allready exist" yellow 
+		cecho " > User $SKUSER allready exist" yellow 
 	else
 	    	useradd -s /bin/bash $SKUSER 
 	fi
@@ -352,20 +354,20 @@ function create_user(){
 
 function check_exist(){
 	trap 'trap_handler ${LINENO} $? check_exist' ERR
-	cecho "Checking for existing installation" green
+	cadre "Checking for existing installation" green
 	if [ -d "$TARGET" ]
 	then
-		cecho ">>Target folder allready exist" red
+		cecho " > Target folder allready exist" red
 		exit 2
 	fi
 	if [ -e "/etc/init.d/shinken" ]
 	then
-		cecho ">>Init scripts allready exist" red
+		cecho " > Init scripts allready exist" red
 		exit 2
 	fi
 	if [ -L "/etc/default/shinken" ]
 	then
-		cecho ">>shinken default allready exist" red
+		cecho " > shinken default allready exist" red
 		exit 2
 	fi
 
@@ -410,7 +412,7 @@ function prerequisites(){
 		rb=$(which $b > /dev/null 2>&1)
 		if [ $? -eq 0 ]
 		then
-			cecho " > Checking for $b : OK" yellow
+			cecho " > Checking for $b : OK" green 
 		else
 			cecho " > Checking for $b : NOT FOUND" red
 			exit 2 
@@ -435,7 +437,7 @@ function prerequisites(){
 				fi
 				rpm -Uvh ./$RPMFORGEPKG > /dev/null 2>&1
 			else
-				cecho " > $RPMFORGEPKG allready installed" yellow 
+				cecho " > $RPMFORGEPKG allready installed" green 
 			fi
 			;;
 		DEBIAN)
@@ -448,7 +450,6 @@ function prerequisites(){
 		$QUERY $p > /dev/null 2>&1
 		if [ $? -ne 0 ]
 		then
-			cecho " > Package $p not installed" yellow
 			cecho " > Installing $p " yellow
 			installpkg pkg $p 
 			if [ $? -ne 0 ]
@@ -457,20 +458,51 @@ function prerequisites(){
 				exit 2 	
 			fi
 		else
-			cecho " > Package $p allready installed " yellow
+			cecho " > Package $p allready installed " green 
 		fi
 	done
 	# python prereq
-	
+	if [ "$CODE" = "REDHAT" ]
+	then
+		for p in $PYLIBSRHEL
+		do
+			module=$(echo $p | awk -F: '{print $1'})
+			import=$(echo $p | awk -F: '{print $2'})
+
+			$myscripts/checkmodule.py -m $import > /dev/null 2>&1
+			if [ $? -eq 2 ]
+			then
+				cecho " > Module $module ($import) not found. Installing..." yellow
+				easy_install $module > /dev/null 2>&1
+			else
+				cecho " > Module $module found." green 
+			fi
+
+			
+		done	
+		module="pyro"
+		import="Pyro.core"
+
+		$myscripts/checkmodule.py -m $import > /dev/null 2>&1
+		
+		if [ $? -eq 2 ]
+		then
+			cecho " > Module $module ($import) not found. Installing..." yellow
+			cd $TMP
+			easy_install $PYRO > /dev/null 2>&1
+		else
+			cecho " > Module $module found." green 
+		fi
+	fi
 	
 }
 
 function compresslogs(){
 	trap 'trap_handler ${LINENO} $? compresslogs' ERR
-	cecho "Compress rotated logs" green
+	cadre "Compress rotated logs" green
 	if [ ! -d $TARGET/var/archives ]
 	then
-		cecho ">>Archives directory not found" yellow
+		cecho " > Archives directory not found" yellow
 		exit 0
 	fi
 	cd $TARGET/var/archives
@@ -479,7 +511,7 @@ function compresslogs(){
 		file=$(basename $l)
 		if [ -e $file ]
 		then
-			cecho ">> Processing $file" green
+			cecho " > Processing $file" green
 			tar czf $file.tar.gz $file
 			rm -f $file
 		fi
