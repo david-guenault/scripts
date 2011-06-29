@@ -403,7 +403,7 @@ function installpkg(){
 function prerequisites(){
 	cadre "Checking prerequisite" green
 	# common prereq
-	bins="wget sed awk grep git python bash"
+	bins="wget sed awk grep python bash"
 
 	for b in $bins
 	do
