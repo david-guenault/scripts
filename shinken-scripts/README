@@ -23,18 +23,12 @@ Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c
 
 ==== configuration file ====
 
-You can modify the target folder by editing the shinken.conf file 
+You can modify the target folder, version to be installed or backup folder by editing the shinken.conf file 
 
-#!/bin/bash
 export TMP=/tmp
-export VERSION="0.6.4"
+export VERSION="0.6.5"
 export TARGET=/opt/shinken
 export BACKUPDIR="/opt/backup"
 export SKUSER=shinken
 export SKGROUP=shinken
-# DO NOT MODIFY THIS EXCEPT IF YOU TESTED A WORKING DISTRO NOT LISTED HERE !
-export DISTROS="Ubuntu Debian"
-export DATE=$(date +%Y%m%d%H%M%S)
-export GIT="https://github.com/naparuba/shinken.git"
-export UPDATE="bin external_commands db doc man shinken"
 
