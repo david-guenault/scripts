@@ -277,6 +277,50 @@ function sinstall(){
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
 	fix
 }
+
+function rheldvd(){
+	# this is only for my personal needs
+	# dvd mounted ?
+	cadre "Setup rhel dvd for yum (this is only for my development purpose)" green
+	dvdm=$(cat /proc/mounts | grep "^\/dev\/cdrom")
+	if [ -z "$dvdm" ]
+	then
+		if [ ! -d "/media/cdrom" ]
+		then
+			mkdir -p "/media/cdrom"
+		fi
+		cecho "Insert RHEL/CENTOS DVD and press ENTER" yellow
+		read enter
+		mount /dev/cdrom /media/cdrom > /dev/null 2>&1
+		if [ $? -ne 0 ]
+		then
+			dvdm=$(cat /proc/mounts | grep "^\/dev\/cdrom")
+			if [ -z "$dvdm" ]
+			then
+				cecho "Unable to mount RHEL/CENTOS DVD !" red
+				exit 2
+			else
+				if [ ! -d "/media/cdrom/Server" ]
+				then
+					cecho "Invalid DVD" red
+					exit 2
+				else
+					if [ ! -f "/etc/yum.repos.d/rheldvd.repo" ]
+					then
+						echo "[dvd]" > /etc/yum.repos.d/rheldvd.repo
+						echo "name=rhel dvd" >> /etc/yum.repos.d/rheldvd.repo
+						echo "baseurl=file:///media/cdrom/Server" >> /etc/yum.repos.d/rheldvd.repo
+						echo "enabled=1" >> /etc/yum.repos.d/rheldvd.repo
+						echo "gpgcheck=0" >> /etc/yum.repos.d/rheldvd.repo
+					fi
+				fi
+			fi
+		else 
+			cecho "Error while mounting DVD" red
+		fi	
+	fi	
+}
+
 function backup(){
 	trap 'trap_handler ${LINENO} $? backup' ERR
 	cadre "Backup shinken configuration, plugins and data" green
@@ -523,9 +567,9 @@ function shelp(){
 }
 
 function usage(){
-echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h 
+echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h  
 	-k	Kill shinken
-	-i	Install shinken
+	-i	Install shinkeni
 	-d 	Remove shinken
 	-u	Update an existing shinken installation
 	-b	Backup shinken configuration plugins and data
@@ -547,6 +591,9 @@ fi
 
 while getopts "kidubcr:lzh" opt; do
         case $opt in
+		s)
+			rheldvd	
+			;;
 		z)
 			check_distro
 			exit 0
