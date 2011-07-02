@@ -281,6 +281,11 @@ function sinstall(){
 function rheldvd(){
 	# this is only for my personal needs
 	# dvd mounted ?
+	if [ "$CODE" != "REDHAT" ]
+	then
+		cecho " > Only for REDHAT" red
+		exit 2
+	fi
 	cadre "Setup rhel dvd for yum (this is only for my development purpose)" green
 	dvdm=$(cat /proc/mounts | grep "^\/dev\/cdrom")
 	if [ -z "$dvdm" ]
@@ -289,15 +294,15 @@ function rheldvd(){
 		then
 			mkdir -p "/media/cdrom"
 		fi
-		cecho "Insert RHEL/CENTOS DVD and press ENTER" yellow
+		cecho " > Insert RHEL/CENTOS DVD and press ENTER" yellow
 		read enter
-		mount /dev/cdrom /media/cdrom > /dev/null 2>&1
-		if [ $? -ne 0 ]
+		mount -t iso9660 -o ro /dev/cdrom /media/cdrom > /dev/null 2>&1
+		if [ $? -eq 0 ]
 		then
 			dvdm=$(cat /proc/mounts | grep "^\/dev\/cdrom")
 			if [ -z "$dvdm" ]
 			then
-				cecho "Unable to mount RHEL/CENTOS DVD !" red
+				cecho " > Unable to mount RHEL/CENTOS DVD !" red
 				exit 2
 			else
 				if [ ! -d "/media/cdrom/Server" ]
@@ -316,7 +321,7 @@ function rheldvd(){
 				fi
 			fi
 		else 
-			cecho "Error while mounting DVD" red
+			cecho " > Error while mounting DVD" red
 		fi	
 	fi	
 }
@@ -589,10 +594,11 @@ then
         exit 1
 fi
 
-while getopts "kidubcr:lzh" opt; do
+while getopts "kidubcr:lzhs" opt; do
         case $opt in
 		s)
 			rheldvd	
+			exit 0
 			;;
 		z)
 			check_distro
