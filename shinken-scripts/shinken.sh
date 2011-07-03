@@ -102,6 +102,22 @@ function cadre(){
 	cecho "+--------------------------------------------------------------------------------" $2
 }
 
+function mcadre(){
+
+	if [ "$1" = "mcline" ]
+	then
+		cecho "+--------------------------------------------------------------------------------" $2
+		return
+	fi
+
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $1
+	do
+		cecho "| $l" $2
+	done
+	IFS=OLDIFS
+}
 
 function check_distro(){
 	trap 'trap_handler ${LINENO} $? check_distro' ERR
@@ -571,8 +587,107 @@ function shelp(){
 	cat $myscripts/README
 }
 
+function install_thruk(){
+	cadre "Installing thruk (this should take a long time if you choosed to build thruk from sources)" green
+	cd $TMP
+	
+	# platform
+	if [ "$CODE" != "REDHAT" ]
+	then
+		cecho " > Curently not implemented" red
+		exit 2
+	fi
+	arch=$(perl -e 'use Config; print $Config{archname}')
+	vers=$(perl -e 'use Config; print $Config{version}')
+
+	# prerequisites
+	case $CODE in
+		REDHAT)
+			PACKAGES=$TYUMPKGS
+			QUERY="rpm -q "
+			;;
+		DEBIAN)
+			PACKAGES=$TAPTPKGS
+			QUERY="dpkg -l "
+			;;
+	esac
+	for p in $PACKAGES
+	do
+		$QUERY $p > /dev/null 2>&1
+		if [ $? -ne 0 ]
+		then
+			cecho " > Installing $p " yellow
+			installpkg pkg $p 
+			if [ $? -ne 0 ]
+			then 
+				cecho " > Error while trying to install $p" red 
+				exit 2 	
+			fi
+		else
+			cecho " > Package $p allready installed " green 
+		fi
+	done
+	
+	# user/group
+	if [ -z "$(cat /etc/passwd | grep $THRUKUSER)" ]
+	then
+		cecho " > Creating user $THRUKUSER" green
+		adduser -d $THRUKDIR -m -s /bin/bash $THRUKUSER 
+	fi
+	
+	# thruk
+	if [ "$THRUKVERS" = "SRC" ]
+	then
+		cecho " > Getting thruk sources " green
+		cecho " > Not implemented " red
+		exit 2 
+	else
+		cecho " > Getting thruk version $THRUKVERS" green
+		wget http://www.thruk.org/files/Thruk-$THRUKVERS-$arch-$vers.tar.gz > /dev/null 2>&1
+		if [ $? -ne 0 ]
+		then
+			cecho " > Error while getting thruk package version $THRUKVERS" red
+			exit 2
+		fi
+		cecho " > Extract thruk archive" green
+		tar zxvf Thruk-$THRUKVERS-$arch-$vers.tar.gz > /dev/null 2>&1
+		cecho " > Deploy thruk to $THRUKDIR" green
+		cp -Rf Thruk-$THRUKVERS $THRUKDIR
+		cecho " > Activate local config" green
+		sed -i "s/^<Component Thruk::Backend>/&\n\t<peer>\n\t\tname = Local shinken\n\t\ttype = livestatus\n\t\t<options>\n\t\t\tpeer = localhost:50000\n\t\t<\/options>\n\t<\/peer>/g" $THRUKDIR/thruk.conf
+		if [ "$CODE" = "REDHAT" ]
+		then
+			# check mod fastcgi for apache
+
+			# build module fastcgi !
+			cd $TMP 
+			wget http://www.fastcgi.com/dist/mod_fastcgi-current.tar.gz
+			tar zxvf mod_fastcgi-current.tar.gz
+			cd $(ls -1 | grep "^mod_fastcgi")
+#			if [ "$(uname -i)" = "x86_64" ]
+#			then 
+#				$suffix="64"
+#			else
+#				$suffix=""
+#			fi
+			apxs -o mod_fastcgi.so -c *.c
+			apxs -i -a -n fastcgi mod_fastcgi.so
+		fi
+		cecho " > Fix permissions" green
+		chown -R $THRUKUSER:$THRUKGRP $THRUKDIR
+		
+	fi
+	mcadre "mcline" green
+	mcadre "Shinken is now installed"
+	mcadre "mcline" green
+	mcadre "Target folder is : $THRUKDIR
+Start thruk with $THRUKDIR/scripts/thruk_server.pl
+You can access thruk at the followinf url : http://localhost:3000" green
+	mcadre "mcline" green
+}
+
 function usage(){
-echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h  
+echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h | -a 
 	-k	Kill shinken
 	-i	Install shinkeni
 	-d 	Remove shinken
@@ -581,6 +696,7 @@ echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h
 	-r 	Restore shinken configuration plugins and data
 	-l	List shinken backups
 	-c	Compress rotated logs
+	-a	addon name (curently thruk)
 	-h	Show help
 "
 
@@ -593,9 +709,21 @@ then
         cecho "You should start the script with sudo!" red
         exit 1
 fi
-
-while getopts "kidubcr:lzhs" opt; do
+while getopts "kidubcr:lzhsa:" opt; do
         case $opt in
+		a)
+			case $OPTARG in
+				thruk)
+					install_thruk
+					exit 0
+					;;
+				*)
+					cecho "Invalid addon ($OPTARG)"
+					exit 2
+					;;
+			esac
+			exit 0
+			;;
 		s)
 			rheldvd	
 			exit 0
