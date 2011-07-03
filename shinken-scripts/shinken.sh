@@ -588,8 +588,39 @@ function shelp(){
 }
 
 function install_thruk(){
-	cadre "Installing thruk (this should take a long time if you choosed to build thruk from sources)" green
 	cd $TMP
+	
+	cecho "What do you want to do ? " green
+	cecho "[i]nstall or [r]emove"
+	read action
+
+	if [ ! -z $action ]
+	then
+		case $action in
+			r)
+				cadre "Removing addon Thruk" green		
+				userdel -f -r $THRUKUSER
+				groupdel $THRUKGRP
+				exit 0
+				;;
+			i)
+				cadre "Installing thruk (this should take a long time if you choosed to build thruk from sources)" green
+				;;
+				
+			*)
+				cecho "Invalid action for module"
+				exit 2
+				;;
+		esac
+	fi
+
+
+	# check exist
+	if [ -d "$THRUKDIR" ]
+	then
+		cecho "Thruk allready exist" red
+		exit 2
+	fi
 	
 	# platform
 	if [ "$CODE" != "REDHAT" ]
@@ -632,7 +663,7 @@ function install_thruk(){
 	if [ -z "$(cat /etc/passwd | grep $THRUKUSER)" ]
 	then
 		cecho " > Creating user $THRUKUSER" green
-		adduser -d $THRUKDIR -m -s /bin/bash $THRUKUSER 
+		useradd -d $THRUKDIR -m -s /bin/bash $THRUKUSER
 	fi
 	
 	# thruk
