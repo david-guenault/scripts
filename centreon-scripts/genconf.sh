@@ -260,10 +260,10 @@ function createORAINSTANCES(){
 			echo "$fqdn" >> $datafile.ko
 		else
 			# now it is time to import data !
-			hgs=$(echo $l | awk -F\; '{print $4}')
 			alias=$(echo $l | awk  -F\; '{print $3}')
 			hostgroups=$(echo $l | awk  -F\; '{print $4}')
 			instances=$(echo $l | awk  -F\; '{print $7}')
+			templates=$(echo $l | awk -F\; '{print $6}' | sed -e "s/:/,/g")
 
 			# check if oracle server exist
 			exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v $hostname | wc -l)
@@ -273,6 +273,33 @@ function createORAINSTANCES(){
 			else
 				#iterate over instances and create virtual oracle server
 				#also set parent to hostname and create a macro INSTORA
+				OLDIFS=$IFS
+				IFS=$':'
+				for orakp in $instances
+				do	
+					type=$(echo $orakp | awk -F= '{print $1}')
+					oinst=$(echo $orakp | awk -F= '{print $2}')
+					# check if virtual host instance exist
+					orahost=$type_DB_$oinst
+					exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v $orahost | wc -l)
+					if [ $exist -ne 2 ]
+					then
+						# virtual host instance does not exist so we can create it
+						#$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$orahost;$orahost;$ip;$templates;$poller" > /dev/null 2>&1
+						cecho " > Created virtual host for oracle instance $orahost" green
+					else
+						# virtual host instance exist we do nothing
+						cecho " > Virtual host for instance oinst allready exist" yellow
+					fi
+					# set parent hostname to physical server
+
+					# add macro INSTORA
+
+	
+
+				done	
+
+				IFS=$OLDIFS
 			fi
 			
 
