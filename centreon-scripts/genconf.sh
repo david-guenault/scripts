@@ -197,8 +197,7 @@ function setParentHosts(){
 
 function ORACLE(){
 	#createHOSTS
-	#createORAINSTANCES
-	
+	createORAINSTANCES
 }
 
 function createORAINSTANCES(){
@@ -210,8 +209,9 @@ function createORAINSTANCES(){
 		fnum=$(echo $l  | awk -F\; '{print NF}')
 		hostname=$(echo $l | awk -F\; '{print $1}')
 		fqdn=$(echo $l | awk  -F\; '{print $2}')
+		cecho " > Processing $hostname" green
 		# determine if a host template is defined inside data file 
-		if [ $fnum -eq 6 ]
+		if [ $fnum -eq 7 ]
 		then
 			ftemplate=$(echo $l | awk -F\; '{print $6}')
 		else
@@ -223,7 +223,7 @@ function createORAINSTANCES(){
 		then
 			if [ -z "$ftemplate" ]
 			then
-				cecho "Host $hostname does not have a host_template" yellow
+				cecho "   > Host $hostname does not have a host_template" yellow
 			else
 				template=$ftemplate	
 			fi
@@ -240,14 +240,14 @@ function createORAINSTANCES(){
 			ip=$(resolveip -s $fqdn)
 			if [ $? -ne 0 ]
 			then
-				cecho "$fqdn could not be resolved ... may be it is an ip ?" yellow
+				cecho "   > $fqdn could not be resolved ... may be it is an ip ?" yellow
 				ping -c 1 $fqdn > /dev/null 2>&1
 				if [ $? -eq 0 ] 
 				then
-					cecho "$fqdn ping OK" yellow
+					cecho "   > $fqdn ping OK" yellow
 					ip=$fqdn
 				else
-					cecho "$fqdn ping KO" yellow
+					cecho "   > $fqdn ping KO" yellow
 					ip=0
 				fi
 			fi
@@ -256,7 +256,7 @@ function createORAINSTANCES(){
 
 		if [ "$ip" = "0" ]
 		then
-			cecho " > Unable to resolve $fqdn. This host will not be imported" yellow
+			cecho "   > Unable to resolve $fqdn. This host will not be imported" yellow
 			echo "$fqdn" >> $datafile.ko
 		else
 			# now it is time to import data !
@@ -267,9 +267,9 @@ function createORAINSTANCES(){
 
 			# check if oracle server exist
 			exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v $hostname | wc -l)
-			if [ $exist -ne 2 ]
+			if [ $exist -eq 0 ]
 			then
-				cecho " > Oracle server does not exist " red
+				cecho " > Oracle server $hostname does not exist " red
 			else
 				#iterate over instances and create virtual oracle server
 				#also set parent to hostname and create a macro INSTORA
@@ -277,26 +277,25 @@ function createORAINSTANCES(){
 				IFS=$':'
 				for orakp in $instances
 				do	
-					type=$(echo $orakp | awk -F= '{print $1}')
+					otype=$(echo $orakp | awk -F= '{print $1}')
 					oinst=$(echo $orakp | awk -F= '{print $2}')
 					# check if virtual host instance exist
-					orahost=$type_DB_$oinst
-					exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v $orahost | wc -l)
-					if [ $exist -ne 2 ]
+					orahost=$otype"_DB_"$oinst
+					exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v $orahost | grep "^\(.*\);$orahost;" | wc -l)
+					if [ $exist -eq 0 ]
 					then
 						# virtual host instance does not exist so we can create it
-						#$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$orahost;$orahost;$ip;$templates;$poller" > /dev/null 2>&1
-						cecho " > Created virtual host for oracle instance $orahost" green
+						$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$orahost;$orahost;$ip;$templates;$poller" > /dev/null 2>&1
+						cecho "   > Created virtual host for oracle instance $orahost :" green
 					else
 						# virtual host instance exist we do nothing
-						cecho " > Virtual host for instance oinst allready exist" yellow
+						cecho "   > Virtual host $orahost  allready exist" yellow
 					fi
 					# set parent hostname to physical server
-
+					$CLI -u $CENTU -p $CENTP -o HOST -a setparent -v "$orahost;$hostname" #> /dev/null 2>&1
+					
 					# add macro INSTORA
-
-	
-
+					$CLI -u $CENTU -p $CENTP -o HOST -a SETMACRO -v "$orahost;INSTORA;$oinst" #> /dev/null 2>&1
 				done	
 
 				IFS=$OLDIFS
@@ -317,7 +316,6 @@ function createHOSTS(){
 		fnum=$(echo $l  | awk -F\; '{print NF}')
 		hostname=$(echo $l | awk -F\; '{print $1}')
 		fqdn=$(echo $l | awk  -F\; '{print $2}')
-		
 		# determine if a host template is defined inside data file 
 		if [ $fnum -eq 6 ]
 		then
