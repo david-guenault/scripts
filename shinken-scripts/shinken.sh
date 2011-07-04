@@ -594,30 +594,44 @@ function install_thruk(){
 	cecho "[i]nstall or [r]emove"
 	read action
 
+	case $(uname -i) in
+		x86_64)
+			suffix="64"
+			;;
+		*)
+			suffix=""
+			;;
+	esac
+
+
 	if [ ! -z $action ]
 	then
 		case $action in
+			# remove thruk
 			r)
-				cadre "Removing addon Thruk" green		
-				userdel -f -r $THRUKUSER
-				groupdel $THRUKGRP
-				# FIXME
+				cadre " > Removing addon Thruk" green	
+	
+				userdel -f -r $THRUKUSER > /dev/null 2>&1
+				groupdel $THRUKGRP > /dev/null 2>&1
 				case $CODE in
 					REDHAT)
-						disable="chkconfig --add thruk && chkconfig thruk on"
+						chkconfig --level thruk off
+						chkconfig --del thruk
+						rm -f /etc/httpd/conf.d/thruk.conf 
+						rm -Rf $THRUKDIR
 						;;
 					*)
-						disable="update-rc.d thruk defaults"
+						update-rc.d -f thruk remove
 						;;
 				esac
 				exit 0
 				;;
 			i)
-				cadre "Installing thruk (this should take a long time if you choosed to build thruk from sources)" green
+				cadre " > Installing thruk (this should take a long time if you choosed to build thruk from sources)" green
 				;;
 				
 			*)
-				cecho "Invalid action for module"
+				cecho "Invalid action for module" red
 				exit 2
 				;;
 		esac
@@ -674,7 +688,9 @@ function install_thruk(){
 	if [ -z "$(cat /etc/passwd | grep $THRUKUSER)" ]
 	then
 		cecho " > Creating user $THRUKUSER" green
-		useradd -d $THRUKDIR -m -s /bin/bash $THRUKUSER
+		#groupadd $THRUKGRP > /dev/null 2>&1
+		useradd -d $THRUKDIR -m -s /bin/bash $THRUKUSER > /dev/null 2>&1
+
 	fi
 	
 	# thruk
@@ -735,9 +751,10 @@ function install_thruk(){
 				enable="update-rc.d thruk defaults"
 				;;
 		esac
-		cat $myscripts/addons/thruk/apache_thruk_fast_cgi_vhost.dist | sed   's/THRUKDIR/'$THRUKDIR'/g' > $httpd_conf_dir/thruk.conf
-		cat $THRUKDIR/script/thruk_fastcgi_server.sh | sed  's/EXECDIR=\(.*\)/EXECDIR='$THRUKDIR'/g' > /etc/init.d/thruk
-i		$(enable)
+		cat $myscripts/addons/thruk/apache_thruk_fast_cgi_vhost.dist | sed   "s#THRUKDIR#"$THRUKDIR"#g" > $httpd_conf_dir/thruk.conf
+		cat $myscripts/addons/thruk/thruk.dist | sed   "s#THRUKDIR#"$THRUKDIR"#g" > /etc/init.d/thruk
+		sed -i "s/# Short-Description:\(.*\)/# Short-Description: &\n#Description: &/" /etc/init.d/thruk 
+		foo=$(enable)
 
 
 		cecho " > Fix permissions" green
