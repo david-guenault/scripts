@@ -534,7 +534,7 @@ function prerequisites(){
 			module=$(echo $p | awk -F: '{print $1'})
 			import=$(echo $p | awk -F: '{print $2'})
 
-			$myscripts/checkmodule.py -m $import > /dev/null 2>&1
+			$myscripts/tools/checkmodule.py -m $import > /dev/null 2>&1
 			if [ $? -eq 2 ]
 			then
 				cecho " > Module $module ($import) not found. Installing..." yellow
@@ -601,6 +601,15 @@ function install_thruk(){
 				cadre "Removing addon Thruk" green		
 				userdel -f -r $THRUKUSER
 				groupdel $THRUKGRP
+				# FIXME
+				case $CODE in
+					REDHAT)
+						disable="chkconfig --add thruk && chkconfig thruk on"
+						;;
+					*)
+						disable="update-rc.d thruk defaults"
+						;;
+				esac
 				exit 0
 				;;
 			i)
@@ -613,7 +622,10 @@ function install_thruk(){
 				;;
 		esac
 	fi
-
+	
+	# clean up tmp folder
+	rm -Rf $TMP/Thruk*
+	rm -Rf $TMP/mod_fastcgi*
 
 	# check exist
 	if [ -d "$THRUKDIR" ]
@@ -630,7 +642,6 @@ function install_thruk(){
 	fi
 	arch=$(perl -e 'use Config; print $Config{archname}')
 	vers=$(perl -e 'use Config; print $Config{version}')
-
 	# prerequisites
 	case $CODE in
 		REDHAT)
@@ -683,33 +694,58 @@ function install_thruk(){
 		cecho " > Extract thruk archive" green
 		tar zxvf Thruk-$THRUKVERS-$arch-$vers.tar.gz > /dev/null 2>&1
 		cecho " > Deploy thruk to $THRUKDIR" green
-		cp -Rf Thruk-$THRUKVERS $THRUKDIR
+		cp -Rf Thruk-$THRUKVERS/* $THRUKDIR
 		cecho " > Activate local config" green
 		sed -i "s/^<Component Thruk::Backend>/&\n\t<peer>\n\t\tname = Local shinken\n\t\ttype = livestatus\n\t\t<options>\n\t\t\tpeer = localhost:50000\n\t\t<\/options>\n\t<\/peer>/g" $THRUKDIR/thruk.conf
 		if [ "$CODE" = "REDHAT" ]
 		then
+			case $(uname -i) in
+				x86_64)
+					suffix="64"
+					;;
+				*)
+					suffix=""
+					;;
+			esac
 			# check mod fastcgi for apache
-
-			# build module fastcgi !
-			cd $TMP 
-			wget http://www.fastcgi.com/dist/mod_fastcgi-current.tar.gz
-			tar zxvf mod_fastcgi-current.tar.gz
-			cd $(ls -1 | grep "^mod_fastcgi")
-#			if [ "$(uname -i)" = "x86_64" ]
-#			then 
-#				$suffix="64"
-#			else
-#				$suffix=""
-#			fi
-			apxs -o mod_fastcgi.so -c *.c
-			apxs -i -a -n fastcgi mod_fastcgi.so
+			if [ -f /usr/lib$suffix/httpd/modules/mod_fastcgi.so ]
+			then
+				cecho " > mod_fastcgi module allready exist" green
+			else
+				# build module fastcgi !
+				cd $TMP 
+				cecho " > Downloading mod_fastcgi sources" yellow
+				wget http://www.fastcgi.com/dist/mod_fastcgi-current.tar.gz > /dev/null 2>&1
+				tar zxvf mod_fastcgi-current.tar.gz > /dev/null 2>&1
+				cd $(ls -1 | grep "^mod_fastcgi")
+				cecho " > Building mod_fastcgi sources" yellow
+				apxs -i -a -o mod_fastcgi.so -c *.c > /dev/null 2>&1
+			fi
 		fi
+		
+		# configure with mode fastcgi
+		cecho " > deploy apache fast_cgi configuration" green
+		case $CODE in
+			REDHAT)
+				httpd_conf_dir=/etc/httpd/conf.d
+				enable="chkconfig --add thruk && chkconfig thruk on"
+				;;
+			*)
+				httpd_conf_dir=/etc/apache2/conf.d
+				enable="update-rc.d thruk defaults"
+				;;
+		esac
+		cat $myscripts/addons/thruk/apache_thruk_fast_cgi_vhost.dist | sed   's/THRUKDIR/'$THRUKDIR'/g' > $httpd_conf_dir/thruk.conf
+		cat $THRUKDIR/script/thruk_fastcgi_server.sh | sed  's/EXECDIR=\(.*\)/EXECDIR='$THRUKDIR'/g' > /etc/init.d/thruk
+i		$(enable)
+
+
 		cecho " > Fix permissions" green
 		chown -R $THRUKUSER:$THRUKGRP $THRUKDIR
 		
 	fi
 	mcadre "mcline" green
-	mcadre "Shinken is now installed"
+	mcadre "Shinken is now installed" green
 	mcadre "mcline" green
 	mcadre "Target folder is : $THRUKDIR
 Start thruk with $THRUKDIR/scripts/thruk_server.pl
