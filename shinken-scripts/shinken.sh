@@ -250,7 +250,7 @@ function relocate(){
 	# relocate init file
 	cd $TARGET/bin/init.d
 	mv shinken shinken.in
-	cat shinken.in | sed -e "s#\#export PYTHONPATH=#export PYTHONPATH=#g" > $TARGET/bin/init.d/shinken
+	cat shinken.in | sed -e "s#\#export PYTHONPATH=.*#export PYTHONPATH="$TARGET"#g" > $TARGET/bin/init.d/shinken
 }
 
 function fix(){
