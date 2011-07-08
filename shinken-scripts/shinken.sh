@@ -102,6 +102,22 @@ function cadre(){
 	cecho "+--------------------------------------------------------------------------------" $2
 }
 
+function mcadre(){
+
+	if [ "$1" = "mcline" ]
+	then
+		cecho "+--------------------------------------------------------------------------------" $2
+		return
+	fi
+
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $1
+	do
+		cecho "| $l" $2
+	done
+	IFS=OLDIFS
+}
 
 function check_distro(){
 	trap 'trap_handler ${LINENO} $? check_distro' ERR
@@ -159,13 +175,14 @@ function skill(){
 	/etc/init.d/shinken stop > /dev/null 2>&1
 	#cecho "Killing shinken" green
 	pc=$(ps -aef | grep "$TARGET" | grep -v "grep" | wc -l )
+	cecho " > $pc proc founds" green
 	if [ $pc -ne 0 ]
 	then	
 		OLDIFS=$IFS
 		IFS=$'\n'
-		
-		for p in $(ps -aef | grep -q "$TARGET" | grep -vq "grep" | awk '{print $2}')
+		for p in $(ps -aef | grep "$TARGET" | grep -v "grep" | awk '{print $2}')
 		do
+			cecho " > killing $p " green
 			kill -9 $p
 		done
 
@@ -234,7 +251,7 @@ function relocate(){
 	# relocate init file
 	cd $TARGET/bin/init.d
 	mv shinken shinken.in
-	cat shinken.in | sed -e "s#\#export PYTHONPATH=#export PYTHONPATH=#g" > $TARGET/bin/init.d/shinken
+	cat shinken.in | sed -e "s#\#export PYTHONPATH=.*#export PYTHONPATH="$TARGET"#g" > $TARGET/bin/init.d/shinken
 }
 
 function fix(){
@@ -275,6 +292,7 @@ function sinstall(){
 	relocate
 	ln -s $TARGET/bin/default/shinken /etc/default/shinken
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
+	mkdir -p $TARGET/var/archives
 	fix
 }
 
@@ -518,7 +536,7 @@ function prerequisites(){
 			module=$(echo $p | awk -F: '{print $1'})
 			import=$(echo $p | awk -F: '{print $2'})
 
-			$myscripts/checkmodule.py -m $import > /dev/null 2>&1
+			$myscripts/tools/checkmodule.py -m $import > /dev/null 2>&1
 			if [ $? -eq 2 ]
 			then
 				cecho " > Module $module ($import) not found. Installing..." yellow
@@ -571,8 +589,191 @@ function shelp(){
 	cat $myscripts/README
 }
 
+function install_thruk(){
+	cd $TMP
+	
+	cecho "What do you want to do ? " green
+	cecho "[i]nstall or [r]emove"
+	read action
+
+	case $(uname -i) in
+		x86_64)
+			suffix="64"
+			;;
+		*)
+			suffix=""
+			;;
+	esac
+
+
+	if [ ! -z $action ]
+	then
+		case $action in
+			# remove thruk
+			r)
+				cadre " > Removing addon Thruk" green	
+	
+				userdel -f -r $THRUKUSER > /dev/null 2>&1
+				groupdel $THRUKGRP > /dev/null 2>&1
+				case $CODE in
+					REDHAT)
+						chkconfig --level thruk off
+						chkconfig --del thruk
+						rm -f /etc/httpd/conf.d/thruk.conf 
+						rm -Rf $THRUKDIR
+						;;
+					*)
+						update-rc.d -f thruk remove
+						;;
+				esac
+				exit 0
+				;;
+			i)
+				cadre " > Installing thruk (this should take a long time if you choosed to build thruk from sources)" green
+				;;
+				
+			*)
+				cecho "Invalid action for module" red
+				exit 2
+				;;
+		esac
+	fi
+	
+	# clean up tmp folder
+	rm -Rf $TMP/Thruk*
+	rm -Rf $TMP/mod_fastcgi*
+
+	# check exist
+	if [ -d "$THRUKDIR" ]
+	then
+		cecho "Thruk allready exist" red
+		exit 2
+	fi
+	
+	# platform
+	if [ "$CODE" != "REDHAT" ]
+	then
+		cecho " > Curently not implemented" red
+		exit 2
+	fi
+	arch=$(perl -e 'use Config; print $Config{archname}')
+	vers=$(perl -e 'use Config; print $Config{version}')
+	# prerequisites
+	case $CODE in
+		REDHAT)
+			PACKAGES=$TYUMPKGS
+			QUERY="rpm -q "
+			;;
+		DEBIAN)
+			PACKAGES=$TAPTPKGS
+			QUERY="dpkg -l "
+			;;
+	esac
+	for p in $PACKAGES
+	do
+		$QUERY $p > /dev/null 2>&1
+		if [ $? -ne 0 ]
+		then
+			cecho " > Installing $p " yellow
+			installpkg pkg $p 
+			if [ $? -ne 0 ]
+			then 
+				cecho " > Error while trying to install $p" red 
+				exit 2 	
+			fi
+		else
+			cecho " > Package $p allready installed " green 
+		fi
+	done
+	
+	# user/group
+	if [ -z "$(cat /etc/passwd | grep $THRUKUSER)" ]
+	then
+		cecho " > Creating user $THRUKUSER" green
+		#groupadd $THRUKGRP > /dev/null 2>&1
+		useradd -d $THRUKDIR -m -s /bin/bash $THRUKUSER > /dev/null 2>&1
+
+	fi
+	
+	# thruk
+	if [ "$THRUKVERS" = "SRC" ]
+	then
+		cecho " > Getting thruk sources " green
+		cecho " > Not implemented " red
+		exit 2 
+	else
+		cecho " > Getting thruk version $THRUKVERS" green
+		wget http://www.thruk.org/files/Thruk-$THRUKVERS-$arch-$vers.tar.gz > /dev/null 2>&1
+		if [ $? -ne 0 ]
+		then
+			cecho " > Error while getting thruk package version $THRUKVERS" red
+			exit 2
+		fi
+		cecho " > Extract thruk archive" green
+		tar zxvf Thruk-$THRUKVERS-$arch-$vers.tar.gz > /dev/null 2>&1
+		cecho " > Deploy thruk to $THRUKDIR" green
+		cp -Rf Thruk-$THRUKVERS/* $THRUKDIR
+		cecho " > Activate local config" green
+		sed -i "s/^<Component Thruk::Backend>/&\n\t<peer>\n\t\tname = Local shinken\n\t\ttype = livestatus\n\t\t<options>\n\t\t\tpeer = localhost:50000\n\t\t<\/options>\n\t<\/peer>/g" $THRUKDIR/thruk.conf
+		if [ "$CODE" = "REDHAT" ]
+		then
+			case $(uname -i) in
+				x86_64)
+					suffix="64"
+					;;
+				*)
+					suffix=""
+					;;
+			esac
+			# check mod fastcgi for apache
+			if [ -f /usr/lib$suffix/httpd/modules/mod_fastcgi.so ]
+			then
+				cecho " > mod_fastcgi module allready exist" green
+			else
+				# build module fastcgi !
+				cd $TMP 
+				cecho " > Downloading mod_fastcgi sources" yellow
+				wget http://www.fastcgi.com/dist/mod_fastcgi-current.tar.gz > /dev/null 2>&1
+				tar zxvf mod_fastcgi-current.tar.gz > /dev/null 2>&1
+				cd $(ls -1 | grep "^mod_fastcgi")
+				cecho " > Building mod_fastcgi sources" yellow
+				apxs -i -a -o mod_fastcgi.so -c *.c > /dev/null 2>&1
+			fi
+		fi
+		
+		# configure with mode fastcgi
+		cecho " > deploy apache fast_cgi configuration" green
+		case $CODE in
+			REDHAT)
+				httpd_conf_dir=/etc/httpd/conf.d
+				enable="chkconfig --add thruk && chkconfig thruk on"
+				;;
+			*)
+				httpd_conf_dir=/etc/apache2/conf.d
+				enable="update-rc.d thruk defaults"
+				;;
+		esac
+		cat $myscripts/addons/thruk/apache_thruk_fast_cgi_vhost.dist | sed   "s#THRUKDIR#"$THRUKDIR"#g" > $httpd_conf_dir/thruk.conf
+		cat $myscripts/addons/thruk/thruk.dist | sed   "s#THRUKDIR#"$THRUKDIR"#g" > /etc/init.d/thruk
+		sed -i "s/# Short-Description:\(.*\)/# Short-Description: &\n#Description: &/" /etc/init.d/thruk 
+		foo=$(enable)
+
+
+		cecho " > Fix permissions" green
+		chown -R $THRUKUSER:$THRUKGRP $THRUKDIR
+		
+	fi
+	mcadre "mcline" green
+	mcadre "Shinken is now installed" green
+	mcadre "mcline" green
+	mcadre "Target folder is : $THRUKDIR
+Start thruk with $THRUKDIR/scripts/thruk_server.pl
+You can access thruk at the followinf url : http://localhost:3000" green
+	mcadre "mcline" green
+}
+
 function usage(){
-echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h  
+echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h | -a 
 	-k	Kill shinken
 	-i	Install shinkeni
 	-d 	Remove shinken
@@ -581,6 +782,7 @@ echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h
 	-r 	Restore shinken configuration plugins and data
 	-l	List shinken backups
 	-c	Compress rotated logs
+	-a	addon name (curently thruk)
 	-h	Show help
 "
 
@@ -593,9 +795,21 @@ then
         cecho "You should start the script with sudo!" red
         exit 1
 fi
-
-while getopts "kidubcr:lzhs" opt; do
+while getopts "kidubcr:lzhsa:" opt; do
         case $opt in
+		a)
+			case $OPTARG in
+				thruk)
+					install_thruk
+					exit 0
+					;;
+				*)
+					cecho "Invalid addon ($OPTARG)"
+					exit 2
+					;;
+			esac
+			exit 0
+			;;
 		s)
 			rheldvd	
 			exit 0
