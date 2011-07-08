@@ -317,7 +317,7 @@ function createHOSTS(){
 		hostname=$(echo $l | awk -F\; '{print $1}')
 		fqdn=$(echo $l | awk  -F\; '{print $2}')
 		# determine if a host template is defined inside data file 
-		if [ $fnum -eq 6 ]
+		if [ $fnum -gt 5
 		then
 			ftemplate=$(echo $l | awk -F\; '{print $6}')
 		else
@@ -401,12 +401,71 @@ function createHOSTS(){
 	IFS=$OLDIFS
 }
 
+function deleteHOSTS(){
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $(cat $datafile)
+	do
+		hostname=$(echo $l | awk -F\; '{print $1}')
+		# check if host exist
+		exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v "$hostname" | wc -l)
+		if [ $exist -ne 0 ] 
+		then
+			cecho "Removing $hostname" green
+			$CLI -u $CENTU -p $CENTP -o HOST -a DEL -v "$hostname" > /dev/null 2>&1
+		else
+			cecho "$hostname does not exist" yellow 
+		fi
+	done
+	IFS=$OLDIFS
+}
+
+function deleteHOSTSVC(){
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $(cat $datafile)
+	do
+		hostname=$(echo $l | awk -F\; '{print $1}')
+		services=$(echo $l | awk -F\; '{print $8}')
+		OLDIFS=$IFS
+		IFS=$':'
+		cecho "------------------------------------------------------------" green
+		for srv in $services
+		do
+
+			cecho "Removing $srv from $hostname" green
+			$CLI -u $CENTU -p $CENTP -o SERVICE -a DEL -v "$hostname;$srv" > /dev/null 2>&1
+		done
+		IFS=$OLDIFS
+	done
+	IFS=$OLDIFS
+}
+
+function applyTPL(){
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $(cat $datafile)
+	do
+		hostname=$(echo $l | awk -F\; '{print $1}')
+		# check if host exist
+		exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v "$hostname" | wc -l)
+		if [ $exist -ne 0 ] 
+		then
+			cecho "applying host templates modifications on $hostname" green
+			$CLI -u $CENTU -p $CENTP -o HOST -a applytpl -v "$hostname" 
+		else
+			cecho "$hostname does not exist" yellow 
+		fi
+	done
+	IFS=$OLDIFS
+}
+
 function usage(){
 echo "Usage : genconf.sh -d file.data -p poller [-t hosttemplate] [-z action] [-n]
         -d	Datafile
         -p      assign hosts to poller
         -t      assign hosts to hosttemplate
-	-z	action to do (PARENT|HOST|HOSTGROUP|HOSTHOSTGROUP|ORACLE)
+	-z	action to do (PARENT|HOST|HOSTGROUP|ORACLE|HGHOST|DELHOST|DELHOSTSVC)
 	-n	Do not try to resolve fqdn when inporting (address is an ip)
 	-h	Show usage
 	-r	Race condition (show what should be done) NOT IMPLEMENTD AT THE MOMENT
@@ -414,12 +473,16 @@ echo "Usage : genconf.sh -d file.data -p poller [-t hosttemplate] [-z action] [-
 	NOTE : genconf need centreon clapi
 
 	NOTE : datafile format is follow
-	    1      2       3         4          5        6          7
-	hostname;fqdn;description;hostgroups[;parents;templates;oracleinstances]
+	    1      2       3         4          5        6          7		   8
+	hostname;fqdn;description;hostgroups[;parents;templates;oracleinstances;services]
+
+	HOST require at least 1,2,3,4 if -t is omited 6 is required
+	PARENT require at least 1,5 and -p 
 
 	* parents is a : separated list
 	* templates is a : separated list
 	* oracleinstances is a : separated list
+	* services is a : separated list
 "
 
 }
@@ -509,9 +572,25 @@ case $action in
 		createHOSTS	
 		exit 0
 		;;
+	DELHOST)
+		cadre "Delete hosts" blue
+		deleteHOSTS	
+		exit 0
+		;;
+	DELHOSTSVC)
+		cadre "Delete services for hosts" blue
+		deleteHOSTSVC
+		exit 0
+		;;
+
 	HOSTGROUP)
 		cadre "Processing hostgroups" blue
 		createHGS
+		exit 0
+		;;
+	HOSTTPL)
+		cadre "Applying host template" blue
+		applyTPL
 		exit 0
 		;;
 	HGHOST)
