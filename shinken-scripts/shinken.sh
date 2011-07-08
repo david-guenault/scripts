@@ -175,13 +175,14 @@ function skill(){
 	/etc/init.d/shinken stop > /dev/null 2>&1
 	#cecho "Killing shinken" green
 	pc=$(ps -aef | grep "$TARGET" | grep -v "grep" | wc -l )
+	cecho " > $pc proc founds" green
 	if [ $pc -ne 0 ]
 	then	
 		OLDIFS=$IFS
 		IFS=$'\n'
-		
-		for p in $(ps -aef | grep -q "$TARGET" | grep -vq "grep" | awk '{print $2}')
+		for p in $(ps -aef | grep "$TARGET" | grep -v "grep" | awk '{print $2}')
 		do
+			cecho " > killing $p " green
 			kill -9 $p
 		done
 
@@ -291,6 +292,7 @@ function sinstall(){
 	relocate
 	ln -s $TARGET/bin/default/shinken /etc/default/shinken
 	cp $TARGET/bin/init.d/shinken* /etc/init.d/
+	mkdir -p $TARGET/var/archives
 	fix
 }
 
