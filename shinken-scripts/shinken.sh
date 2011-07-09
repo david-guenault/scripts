@@ -96,6 +96,25 @@ cecho ()
         return
 }
 
+######################################################################
+#   AUTHOR: Joe Negron - LOGIC Wizards ~ NYC
+#  LICENSE: BuyMe-a-Drinkware: Dual BSD or GPL (pick one)
+#    USAGE: byteMe (bytes)
+# ABSTRACT: Converts a numeric parameter to a human readable format.
+######################################################################
+function byteMe() { # Divides by 2^10 until < 1024 and then append metric suffix
+	declare -a METRIC=(' Bytes' 'KB' 'MB' 'GB' 'TB' 'XB' 'PB') # Array of suffixes
+	MAGNITUDE=0  # magnitude of 2^10
+	PRECISION="scale=1" # change this numeric value to inrease decimal precision
+	UNITS=`echo $1 | tr -d ‘,’`  # numeric arg val (in bytes) to be converted
+	while [ ${UNITS/.*} -ge 1024 ] # compares integers (b/c no floats in bash)
+	  do
+	   UNITS=`echo "$PRECISION; $UNITS/1024" | bc` # floating point math via `bc`
+	   ((MAGNITUDE++)) # increments counter for array pointer
+	  done
+	echo="$UNITS${METRIC[$MAGNITUDE]}"
+}
+
 function cadre(){
 	cecho "+--------------------------------------------------------------------------------" $2
 	cecho "| $1" $2
@@ -168,6 +187,26 @@ function remove(){
 	rm -f /etc/init.d/shinken*
 
 	return 0
+}
+
+function purgeSQLITE(){
+	cadre "Purge livestatus db logs" green
+	if [ ! -f $TARGET/var/livestatus.db ]
+	then
+		cecho " > Livestatus db not found " yellow
+		exit 1
+	fi
+#	val=$(ls -la /opt/shinken/var/livestatus.db | awk '{print $5}')
+#	size1=$(byteMe $val)
+#	cecho " > Original size : $size1 " green
+	skill > /dev/null 2>&1
+	cecho " > we keep $KEEPDAYSLOG days of logs" green
+	sqlite3 $TARGET/var/livestatus.db "delete from logs where time < strftime('%s', 'now') - 3600*24*$KEEPDAYSLOG"
+	cecho " > Vaccum the sqlite DB" green
+	sqlite3 $TARGET/var/livestatus.db VACUUM
+#	val=$(ls -la /opt/shinken/var/livestatus.db | awk '{print $5}')
+#	size2=$(byteMe $val)
+#	cecho " > New size : $size1 " green
 }
 
 function skill(){
@@ -778,6 +817,7 @@ echo "Usage : shinken -k | -i | -d | -u | -b | -r | -l | -c | -h | -a
 	-i	Install shinkeni
 	-d 	Remove shinken
 	-u	Update an existing shinken installation
+	-v	purge livestatus sqlite db and shrink sqlite db
 	-b	Backup shinken configuration plugins and data
 	-r 	Restore shinken configuration plugins and data
 	-l	List shinken backups
@@ -795,7 +835,7 @@ then
         cecho "You should start the script with sudo!" red
         exit 1
 fi
-while getopts "kidubcr:lzhsa:" opt; do
+while getopts "kidubcr:lzhsa:v" opt; do
         case $opt in
 		a)
 			case $OPTARG in
@@ -812,6 +852,10 @@ while getopts "kidubcr:lzhsa:" opt; do
 			;;
 		s)
 			rheldvd	
+			exit 0
+			;;
+		v)
+			purgeSQLITE	
 			exit 0
 			;;
 		z)
