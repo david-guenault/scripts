@@ -127,7 +127,7 @@ function createHGS(){
 				if [ -z $($CLI -u $CENTU -p $CENTP -o HG -a show | grep -q $hg) ]
 				then 
 					cecho "Creating hostgroup $hg" green
-					$CLI -u $CENTU -p $CENTP -o HG -a add -v "$hg;$hg" 
+					$CLI -u $CENTU -p $CENTP -o HG -a add -v "$hg;$g" >> /tmp/clapi.log 2>&1 
 				else
 					cecho "HG $hg allready exist" yellow
 				fi
@@ -156,7 +156,7 @@ function associateHGS(){
 			if [ -z $($CLI -u $CENTU -p $CENTP -o HG -a show | grep -q $hg | grep -q $hostname) ]
 			then 
 				cecho "Associating hostgroup $hg with host $hostname" green
-				$CLI -u $CENTU -p $CENTP -o HG -a addchild -v "$hg;$hostname" > /dev/null 2>&1
+				$CLI -u $CENTU -p $CENTP -o HG -a addchild -v "$hg;$hostname"  >> /tmp/clapi.log 2>&1
 			else
 				cecho "HG $hg is allready associated with host $hostname " yellow
 			fi
@@ -186,7 +186,7 @@ function setParentHosts(){
 		for parent in $parents
 		do
 			cecho "Associating $parent to $hostname" green
-			$CLI -u $CENTU -p $CENTP -o HOST -a setparent -v "$hostname;$parent" 
+			$CLI -u $CENTU -p $CENTP -o HOST -a setparent -v "$hostname;$parent"  >> /tmp/clapi.log 2>&1
 				
 		done
 		IFS=$OLDIFS
@@ -285,17 +285,17 @@ function createORAINSTANCES(){
 					if [ $exist -eq 0 ]
 					then
 						# virtual host instance does not exist so we can create it
-						$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$orahost;$orahost;$ip;$templates;$poller" > /dev/null 2>&1
+						$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$orahost;$orahost;$ip;$templates;$poller"  >> /tmp/clapi.log 2>&1
 						cecho "   > Created virtual host for oracle instance $orahost :" green
 					else
 						# virtual host instance exist we do nothing
 						cecho "   > Virtual host $orahost  allready exist" yellow
 					fi
 					# set parent hostname to physical server
-					$CLI -u $CENTU -p $CENTP -o HOST -a setparent -v "$orahost;$hostname" #> /dev/null 2>&1
+					$CLI -u $CENTU -p $CENTP -o HOST -a setparent -v "$orahost;$hostname"  >> /tmp/clapi.log 2>&1
 					
 					# add macro INSTORA
-					$CLI -u $CENTU -p $CENTP -o HOST -a SETMACRO -v "$orahost;INSTORA;$oinst" #> /dev/null 2>&1
+					$CLI -u $CENTU -p $CENTP -o HOST -a SETMACRO -v "$orahost;INSTORA;$oinst"  >> /tmp/clapi.log 2>&1
 				done	
 
 				IFS=$OLDIFS
@@ -317,7 +317,7 @@ function createHOSTS(){
 		hostname=$(echo $l | awk -F\; '{print $1}')
 		fqdn=$(echo $l | awk  -F\; '{print $2}')
 		# determine if a host template is defined inside data file 
-		if [ $fnum -eq 6 ]
+		if [ $fnum -gt 5 ]
 		then
 			ftemplate=$(echo $l | awk -F\; '{print $6}')
 		else
@@ -383,11 +383,11 @@ function createHOSTS(){
 					then
 						# exist so just bind template
 						cecho "Associate $hostname with host_template $t" green
-						$CLI -u $CENTU -p $CENTP -o HOST -a ADDTEMPLATE -v "$hostname;$t" > /dev/null 2>&1
+						$CLI -u $CENTU -p $CENTP -o HOST -a ADDTEMPLATE -v "$hostname;$t"  >> /tmp/clapi.log 2>&1
 					else
 						# do not exist so create host 
 						cecho "Creating host $hostname ($ip) with host template $t" green
-						$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$hostname;$alias;$ip;$t;$poller" > /dev/null 2>&1
+						$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$hostname;$alias;$ip;$t;$poller" >> /tmp/clapi.log 2>&1
 					fi
 				done
 				IFS=$OLDIFS
@@ -401,12 +401,79 @@ function createHOSTS(){
 	IFS=$OLDIFS
 }
 
+function deleteHOSTS(){
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $(cat $datafile)
+	do
+		hostname=$(echo $l | awk -F\; '{print $1}')
+		# check if host exist
+		exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v "$hostname" | wc -l)
+		if [ $exist -ne 0 ] 
+		then
+			cecho "Removing $hostname" green
+			$CLI -u $CENTU -p $CENTP -o HOST -a DEL -v "$hostname" >> /tmp/clapi.log 2>&1
+		else
+			cecho "$hostname does not exist" yellow 
+		fi
+	done
+	IFS=$OLDIFS
+}
+
+function deleteHOSTSVC(){
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $(cat $datafile)
+	do
+		hostname=$(echo $l | awk -F\; '{print $1}')
+		services=$(echo $l | awk -F\; '{print $8}')
+		OLDIFS=$IFS
+		IFS=$':'
+		cecho "------------------------------------------------------------" green
+		for srv in $services
+		do
+
+			cecho "Removing $srv from $hostname" green
+			$CLI -u $CENTU -p $CENTP -o SERVICE -a DEL -v "$hostname;$srv" >> /tmp/clapi.log 2>&1
+		done
+		IFS=$OLDIFS
+	done
+	IFS=$OLDIFS
+}
+
+function applyTPL(){
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $(cat $datafile)
+	do
+		hostname=$(echo $l | awk -F\; '{print $1}')
+		# check if host exist
+		exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v "$hostname" | wc -l)
+		if [ $exist -ne 0 ] 
+		then
+			cecho "applying host templates modifications on $hostname" green
+			$CLI -u $CENTU -p $CENTP -o HOST -a applytpl -v "$hostname"  >> /tmp/clapi.log 2>&1
+		else
+			cecho "$hostname does not exist" yellow 
+		fi
+	done
+	IFS=$OLDIFS
+}
+
 function usage(){
 echo "Usage : genconf.sh -d file.data -p poller [-t hosttemplate] [-z action] [-n]
         -d	Datafile
         -p      assign hosts to poller
         -t      assign hosts to hosttemplate
-	-z	action to do (PARENT|HOST|HOSTGROUP|HOSTHOSTGROUP|ORACLE)
+	-z	action to do (PARENT|HOST|HOSTGROUP|ORACLE|HGHOST|DELHOST|DELHOSTSVC|HOSTTPL)
+		* PARENT : create parent association between field 1 and field 5
+		* HOST : create hosts
+		* HOSTGROUP : create hostgroups from field 4 
+		* ORACLE : N/A
+		* HGHOSTS : link host with hostgroups from field 4
+		* DELHOST : delete hosts defined in field 1
+		* DELHOSTSVC : delete services definied in field 8 for host defined in field 1
+		* HOSTTPL : apply host templates defined in field 6 so it can generate services from host template 
 	-n	Do not try to resolve fqdn when inporting (address is an ip)
 	-h	Show usage
 	-r	Race condition (show what should be done) NOT IMPLEMENTD AT THE MOMENT
@@ -414,12 +481,16 @@ echo "Usage : genconf.sh -d file.data -p poller [-t hosttemplate] [-z action] [-
 	NOTE : genconf need centreon clapi
 
 	NOTE : datafile format is follow
-	    1      2       3         4          5        6          7
-	hostname;fqdn;description;hostgroups[;parents;templates;oracleinstances]
+	    1      2       3         4          5        6          7		   8
+	hostname;fqdn;description;hostgroups[;parents;templates;oracleinstances;services]
+
+	HOST require at least 1,2,3,4 if -t is omited 6 is required
+	PARENT require at least 1,5 and -p 
 
 	* parents is a : separated list
 	* templates is a : separated list
 	* oracleinstances is a : separated list
+	* services is a : separated list
 "
 
 }
@@ -477,7 +548,9 @@ done
 
 if [ -z "$action" ]
 then
-	action="ALL"
+	cecho " > You need to specify an action " red
+	usage
+	exit 2
 fi
 
 if [ ! -f "$datafile" ]
@@ -486,7 +559,7 @@ then
 	usage
 	exit 2
 fi
-
+echo "" > /tmp/clapi.log
 case $action in
 	ALL)
 		cadre "Processing hostgroups" blue
@@ -509,9 +582,25 @@ case $action in
 		createHOSTS	
 		exit 0
 		;;
+	DELHOST)
+		cadre "Delete hosts" blue
+		deleteHOSTS	
+		exit 0
+		;;
+	DELHOSTSVC)
+		cadre "Delete services for hosts" blue
+		deleteHOSTSVC
+		exit 0
+		;;
+
 	HOSTGROUP)
 		cadre "Processing hostgroups" blue
 		createHGS
+		exit 0
+		;;
+	HOSTTPL)
+		cadre "Applying host template" blue
+		applyTPL
 		exit 0
 		;;
 	HGHOST)
