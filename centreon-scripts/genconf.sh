@@ -279,13 +279,14 @@ function createORAINSTANCES(){
 				do	
 					otype=$(echo $orakp | awk -F= '{print $1}')
 					oinst=$(echo $orakp | awk -F= '{print $2}')
+					otemplate=$(echo $orakp | awk -F= '{print $3}')
 					# check if virtual host instance exist
 					orahost=$otype"_DB_"$oinst
 					exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v $orahost | grep "^\(.*\);$orahost;" | wc -l)
 					if [ $exist -eq 0 ]
 					then
 						# virtual host instance does not exist so we can create it
-						$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$orahost;$orahost;$ip;$templates;$poller"  >> /tmp/clapi.log 2>&1
+						$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$orahost;$orahost;$ip;$otemplate;$poller"  >> /tmp/clapi.log 2>&1
 						cecho "   > Created virtual host for oracle instance $orahost :" green
 					else
 						# virtual host instance exist we do nothing
