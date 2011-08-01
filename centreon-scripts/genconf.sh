@@ -138,6 +138,31 @@ function createHGS(){
 	IFS=$OLDIFS
 }
 
+
+function MACROS(){
+        cecho "Creating hosts macros" green
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $(cat $datafile)
+	do
+		hostname=$(echo $l | awk -F\; '{print $1}')
+		macros=$(echo $l | awk -F\; '{print $9}')
+		OLDIFS2=$IFS
+		IFS=$':'
+		cadre "processing host $hostname for macros creation" green 
+		for macro in $macros
+		do
+			key=$(echo $macro | awk -F= '{print $1}')
+			value=$(echo $macro | awk -F= '{print $2}')
+			cecho "processing macro $key with value $value" green 
+			$CLI -u $CENTU -p $CENTP -o HOST -a SETMACRO -v "$hostname;$key;$value"  >> /tmp/clapi.log 2>&1
+		done
+		IFS=$OLDIFS2
+	done
+	IFS=$OLDIFS
+
+}
+
 function associateHGS(){
         #trap 'trap_handler ${LINENO} $? associateHGS' ERR
         cecho "Associating hosts with hostgroups" green
@@ -462,36 +487,37 @@ function applyTPL(){
 }
 
 function usage(){
-echo "Usage : genconf.sh -d file.data -p poller [-t hosttemplate] [-z action] [-n]
+echo "Usage : genconf.sh -d file.data -p poller [-z actions ] [-n]
         -d	Datafile
         -p      assign hosts to poller
-        -t      assign hosts to hosttemplate
-	-z	action to do (PARENT|HOST|HOSTGROUP|ORACLE|HGHOST|DELHOST|DELHOSTSVC|HOSTTPL)
+	-z	action(s) to do (PARENT|HOST|HOSTGROUP|ORACLE|HGHOST|DELHOST|DELHOSTSVC|HOSTTPL|MACROS)
+		if more than one action is specified, it should be separated by a coma
 		* PARENT : create parent association between field 1 and field 5
 		* HOST : create hosts
 		* HOSTGROUP : create hostgroups from field 4 
 		* ORACLE : N/A
+		* MACROS : Create host macros specified in field 9
 		* HGHOSTS : link host with hostgroups from field 4
 		* DELHOST : delete hosts defined in field 1
 		* DELHOSTSVC : delete services definied in field 8 for host defined in field 1
 		* HOSTTPL : apply host templates defined in field 6 so it can generate services from host template 
 	-n	Do not try to resolve fqdn when inporting (address is an ip)
 	-h	Show usage
-	-r	Race condition (show what should be done) NOT IMPLEMENTD AT THE MOMENT
 
 	NOTE : genconf need centreon clapi
 
 	NOTE : datafile format is follow
-	    1      2       3         4          5        6          7		   8
-	hostname;fqdn;description;hostgroups[;parents;templates;oracleinstances;services]
+	    1      2       3         4          5        6          7		   8       9
+	hostname;fqdn;description;hostgroups[;parents;templates;oracleinstances;services;macros]
 
 	HOST require at least 1,2,3,4 if -t is omited 6 is required
 	PARENT require at least 1,5 and -p 
-
+	MACROS require at least 1 and 9
 	* parents is a : separated list
 	* templates is a : separated list
 	* oracleinstances is a : separated list
 	* services is a : separated list
+	* macros is a : separated list
 "
 
 }
@@ -513,28 +539,20 @@ fi
 #trap 'trap_handler ${LINENO} $?' ERR
 #cecho "Parsing arguments" green
 export noresolve=0
-while getopts "d:p:tm:z:nh" opt; do
+while getopts "d:p:z:nh" opt; do
         case $opt in
 		h)
 			usage
 			exit 0	
 			;;
 		z)
-			action=$OPTARG
+			actions=$OPTARG
 			;;
                 d)
                         datafile=$OPTARG
                         ;;
                 p)
                         poller=$OPTARG
-                        ;;
-                t)
-			if [ ! -z "$OPTARG" ]
-			then
-				ptemplate=$OPTARG
-			else
-				ptemplate=""
-			fi
                         ;;
                 n)
 			export noresolve=1
@@ -546,76 +564,65 @@ while getopts "d:p:tm:z:nh" opt; do
         esac
 done
 
-
-if [ -z "$action" ]
-then
-	cecho " > You need to specify an action " red
-	usage
-	exit 2
-fi
-
 if [ ! -f "$datafile" ]
 then
 	cecho "datafile $datafile not found" red
 	usage
 	exit 2
 fi
-echo "" > /tmp/clapi.log
-case $action in
-	ALL)
-		cadre "Processing hostgroups" blue
-		createHGS
-		cadre "Processing hosts" blue
-		createHOSTS
-		cadre "Processing hosts/hostgroups association" blue
-		associateHGS
-		cadre "Set hosts parents" blue
-		setParentHosts
-		exit 0
-		;;
-	PARENT)
-		cadre "Set hosts parents" blue
-		setParentHosts
-		exit 0
-		;;
-	HOST)
-		cadre "Import hosts" blue
-		createHOSTS	
-		exit 0
-		;;
-	DELHOST)
-		cadre "Delete hosts" blue
-		deleteHOSTS	
-		exit 0
-		;;
-	DELHOSTSVC)
-		cadre "Delete services for hosts" blue
-		deleteHOSTSVC
-		exit 0
-		;;
 
-	HOSTGROUP)
-		cadre "Processing hostgroups" blue
-		createHGS
-		exit 0
-		;;
-	HOSTTPL)
-		cadre "Applying host template" blue
-		applyTPL
-		exit 0
-		;;
-	HGHOST)
-		cadre "Processing hosts/hostgroups association" blue
-		associateHGS
-		exit 0
-		;;
-	ORACLE)
-		cadre "Processing oracle instances" blue
-		ORACLE
-		exit 0
-		;;
-	*)
-		usage
-		exit 0
-		;;
-esac
+if [ -z "$actions" ]
+then
+	cecho " > You need to specify at least one action " red
+	usage
+	exit 2
+fi
+
+echo "" > /tmp/clapi.log
+lactions=$(echo $actions | sed -e "s/,/ /g")
+for action in $lactions
+do
+	case $action in
+		PARENT)
+			cadre "Set hosts parents" blue
+			setParentHosts
+			;;
+		HOST)
+			cadre "Import hosts" blue
+			createHOSTS	
+			;;
+		DELHOST)
+			cadre "Delete hosts" blue
+			deleteHOSTS	
+			;;
+		DELHOSTSVC)
+			cadre "Delete services for hosts" blue
+			deleteHOSTSVC
+			;;
+
+		HOSTGROUP)
+			cadre "Processing hostgroups" blue
+			createHGS
+			;;
+		HOSTTPL)
+			cadre "Applying host template" blue
+			applyTPL
+			;;
+		HGHOST)
+			cadre "Processing hosts/hostgroups association" blue
+			associateHGS
+			;;
+		ORACLE)
+			cadre "Processing oracle instances" blue
+			ORACLE
+			;;
+		MACROS)
+			cadre "Processing host macros" blue
+			MACROS
+			;;
+		*)
+			usage
+			exit 0
+			;;
+	esac
+done
