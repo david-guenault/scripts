@@ -220,118 +220,6 @@ function setParentHosts(){
 	
 }
 
-function ORACLE(){
-	#createHOSTS
-	createORAINSTANCES
-}
-
-function createORAINSTANCES(){
-	rm -f $datafile.ko
-	OLDIFS=$IFS
-	IFS=$'\n'
-	for l in $(cat $datafile)
-	do
-		fnum=$(echo $l  | awk -F\; '{print NF}')
-		hostname=$(echo $l | awk -F\; '{print $1}')
-		fqdn=$(echo $l | awk  -F\; '{print $2}')
-		cecho " > Processing $hostname" green
-		# determine if a host template is defined inside data file 
-		if [ $fnum -eq 7 ]
-		then
-			ftemplate=$(echo $l | awk -F\; '{print $6}')
-		else
-			ftemplate=""
-		fi
-		
-		# if template is specified in data file it override the one specified on commmand line
-		if [ -z $ptemplate ]
-		then
-			if [ -z "$ftemplate" ]
-			then
-				cecho "   > Host $hostname does not have a host_template" yellow
-			else
-				template=$ftemplate	
-			fi
-		else
-			template=$ptemplate
-		fi
-
-
-		# do not try to resolve hostname if -n is specified
-		if [ $noresolve -eq 1 ]
-		then
-			ip=$fqdn
-		else	
-			ip=$(resolveip -s $fqdn)
-			if [ $? -ne 0 ]
-			then
-				cecho "   > $fqdn could not be resolved ... may be it is an ip ?" yellow
-				ping -c 1 $fqdn > /dev/null 2>&1
-				if [ $? -eq 0 ] 
-				then
-					cecho "   > $fqdn ping OK" yellow
-					ip=$fqdn
-				else
-					cecho "   > $fqdn ping KO" yellow
-					ip=0
-				fi
-			fi
-		fi
-
-
-		if [ "$ip" = "0" ]
-		then
-			cecho "   > Unable to resolve $fqdn. This host will not be imported" yellow
-			echo "$fqdn" >> $datafile.ko
-		else
-			# now it is time to import data !
-			alias=$(echo $l | awk  -F\; '{print $3}')
-			hostgroups=$(echo $l | awk  -F\; '{print $4}')
-			instances=$(echo $l | awk  -F\; '{print $7}')
-			templates=$(echo $l | awk -F\; '{print $6}' | sed -e "s/:/,/g")
-
-			# check if oracle server exist
-			exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v $hostname | wc -l)
-			if [ $exist -eq 0 ]
-			then
-				cecho " > Oracle server $hostname does not exist " red
-			else
-				#iterate over instances and create virtual oracle server
-				#also set parent to hostname and create a macro INSTORA
-				OLDIFS=$IFS
-				IFS=$':'
-				for orakp in $instances
-				do	
-					otype=$(echo $orakp | awk -F= '{print $1}')
-					oinst=$(echo $orakp | awk -F= '{print $2}')
-					otemplate=$(echo $orakp | awk -F= '{print $3}')
-					# check if virtual host instance exist
-					orahost=$otype"_DB_"$oinst
-					exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v $orahost | grep "^\(.*\);$orahost;" | wc -l)
-					if [ $exist -eq 0 ]
-					then
-						# virtual host instance does not exist so we can create it
-						$CLI -u $CENTU -p $CENTP -o HOST -a add -v "$orahost;$orahost;$ip;$otemplate;$poller"  >> /tmp/clapi.log 2>&1
-						cecho "   > Created virtual host for oracle instance $orahost :" green
-					else
-						# virtual host instance exist we do nothing
-						cecho "   > Virtual host $orahost  allready exist" yellow
-					fi
-					# set parent hostname to physical server
-					$CLI -u $CENTU -p $CENTP -o HOST -a setparent -v "$orahost;$hostname"  >> /tmp/clapi.log 2>&1
-					
-					# add macro INSTORA
-					$CLI -u $CENTU -p $CENTP -o HOST -a SETMACRO -v "$orahost;INSTORA;$oinst"  >> /tmp/clapi.log 2>&1
-				done	
-
-				IFS=$OLDIFS
-			fi
-			
-
-		fi
-	done
-	IFS=$OLDIFS
-}
 
 function createHOSTS(){
 	rm -f $datafile.ko
@@ -427,6 +315,31 @@ function createHOSTS(){
 	IFS=$OLDIFS
 }
 
+function COMMANDS(){
+	OLDIFS=$IFS
+	IFS=$'\n'
+	for l in $(cat $datafile)
+	do
+		name=$(echo $l | awk -F\; '{print $1}')i
+		type=$(echo $l | awk -F\; '{print $2}')i
+		command=$(echo $l | awk -F\; '{print $3}')i
+		# check if command exist
+		exist=$($CLI -u $CENTU -p $CENTP -o CMD -a show | grep "^$name" | wc -l)
+		if [ $exist -eq 0 ] 
+		then
+			cecho "Adding command $name" green
+			$CLI -u $CENTU -p $CENTP -o CMD -a ADD -v "$name;$command;$type" >> /tmp/clapi.log 2>&1
+			if [ $? -ne 0 ]
+			then
+				cecho "There was a problem inserting command $name" red
+			fi
+		else
+			cecho "command $name allready exist" yellow 
+		fi
+	done
+	IFS=$OLDIFS
+}
+
 function deleteHOSTS(){
 	OLDIFS=$IFS
 	IFS=$'\n'
@@ -475,6 +388,7 @@ function applyTPL(){
 		hostname=$(echo $l | awk -F\; '{print $1}')
 		# check if host exist
 		exist=$($CLI -u $CENTU -p $CENTP -o HOST -a show -v "$hostname" | wc -l)
+
 		if [ $exist -ne 0 ] 
 		then
 			cecho "applying host templates modifications on $hostname" green
@@ -490,17 +404,23 @@ function usage(){
 echo "Usage : genconf.sh -d file.data -p poller [-z actions ] [-n]
         -d	Datafile
         -p      assign hosts to poller
-	-z	action(s) to do (PARENT|HOST|HOSTGROUP|ORACLE|HGHOST|DELHOST|DELHOSTSVC|HOSTTPL|MACROS)
+	-z	action(s) to do (PARENT|HOST|HOSTGROUP|HGHOST|DELHOST|DELHOSTSVC|HOSTTPL|MACROS)
 		if more than one action is specified, it should be separated by a coma
 		* PARENT : create parent association between field 1 and field 5
 		* HOST : create hosts
 		* HOSTGROUP : create hostgroups from field 4 
-		* ORACLE : N/A
 		* MACROS : Create host macros specified in field 9
 		* HGHOSTS : link host with hostgroups from field 4
 		* DELHOST : delete hosts defined in field 1
 		* DELHOSTSVC : delete services definied in field 8 for host defined in field 1
-		* HOSTTPL : apply host templates defined in field 6 so it can generate services from host template 
+		* HOSTTPL : apply host templates defined in field 6 so it can generate services from host template
+
+		* COMMANDS : import commands (caution this is a special import so the format of the data file is a little bit different.
+		             in this case poller (-p) is not needed
+				1	2	       3
+			command_name;command_type;command_line
+			command_type should be check, notif or misc
+
 	-n	Do not try to resolve fqdn when inporting (address is an ip)
 	-h	Show usage
 
@@ -564,6 +484,7 @@ while getopts "d:p:z:nh" opt; do
         esac
 done
 
+
 if [ ! -f "$datafile" ]
 then
 	cecho "datafile $datafile not found" red
@@ -612,9 +533,9 @@ do
 			cadre "Processing hosts/hostgroups association" blue
 			associateHGS
 			;;
-		ORACLE)
-			cadre "Processing oracle instances" blue
-			ORACLE
+		COMMANDS)
+			cadre "Importing commands" blue
+			COMMANDS	
 			;;
 		MACROS)
 			cadre "Processing host macros" blue
