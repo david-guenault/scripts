@@ -6,7 +6,7 @@ class Monitoringfrblog < TC_Check_watir
 	####################################################
 
 	$BASEURL='http://www.monitoring-fr.org'
-	$LOGIN='dguenault'
+	$LOGIN='username'
 	$PASSWORD='yourpassword'
 	$DISCONNECT='http://www.monitoring-fr.org/wp-login.php?action=logout&_wpnonce=fffb6c5b7d&redirect_to=http%3A%2F%2Fwww.monitoring-fr.org%2F'
 

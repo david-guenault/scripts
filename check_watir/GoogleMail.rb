@@ -5,13 +5,13 @@ class GoogleMail < TC_Check_watir
 	# Scenario
 	####################################################
 
-	$BASEURL='https://www.google.com/accounts/ServiceLogin?service=mail'
-	$LOGIN='user'
-	$PASSWORD='password'
+	$BASEURL='https://mail.google.com/mail/?shva=1#inbox'
+	$LOGIN=''
+	$PASSWORD=''
 	$DISCONNECT='https://mail.google.com/mail/?logout&hl=fr'
 
 	# Report parameters
-	$REPORT='/tmp/GoogleMail'
+	$REPORT='/var/www/reports/GoogleMail'
 	$REPORTTITLE='Google Mail testing'
 	$REPORTURI='http://localhost/reports'
 	
@@ -25,15 +25,14 @@ class GoogleMail < TC_Check_watir
 		$current="mail_do_login"
 		$browser.text_field(:name => 'Email').set $LOGIN
 		$browser.text_field(:name => 'Passwd').set $PASSWORD
-		$browser.checkbox(:value => 'PersistentCookie').clear
+		$browser.checkbox(:value => 'yes').clear
 		$browser.button(:name => 'signIn').click
-		textPresent("dldldldlldldldl")
+		waitTextPresent("Chargement de la version standard")
 	end
 	
 	def test_3_mail_do_logout
 		$current="mail_do_logout"
 		$browser.goto $DISCONNECT	
-		textPresent("Connectez-vous à l'aide de votre")
 	end
 end
 
