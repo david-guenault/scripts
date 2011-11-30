@@ -3,6 +3,16 @@ Introduction
 
 This is a handy script to ease the creation of TLS certificate when using libvirt remote connections (qemu+tls)
 
+Prerequisites
+~~~~~~~~~~~~~
+
+gnutls
+
+Limitations
+~~~~~~~~~~~
+
+only tested on debian/ubuntu/mint
+
 Usage
 ~~~~~
 
