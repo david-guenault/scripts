@@ -1,0 +1,9 @@
+country = FR
+state = frogland 
+locality = frogcity 
+organization = ORGA 
+cn = CN 
+tls_www_client
+encryption_key
+signing_key
+

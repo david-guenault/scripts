@@ -1,0 +1,208 @@
+#!/bin/bash  
+
+# environnement
+export myscripts=$(readlink -f $(dirname $0))
+src=$(readlink -f "$myscripts/../../..")
+. $myscripts/pki.conf
+
+
+function cadre(){
+	cecho "+--------------------------------------------------------------------------------" $2
+	cecho "| $1" $2
+	cecho "+--------------------------------------------------------------------------------" $2
+}
+
+function usage(){
+echo "Usage : pki.sh -c [action] -o organization -n hostname | -z | -h  
+	-c	configure pki
+		actions :
+			ca : create a certificate of authority
+			server : create server cert and key
+			client : create client cert and key
+	-z	clear all configuration
+	-h	Show help
+"
+
+}
+
+function createca(){
+	orga=$1
+	cecho " > create CA $orga" green
+	createlayout $orga
+	createkey $orga
+	cp $myscripts/ca.info $myscripts/$orga/ca.info
+	sed -i 's/ORGA/'$orga'/g' $myscripts/$orga/ca.info 
+	certtool --generate-self-signed --template $myscripts/$orga/ca.info --load-privkey $myscripts/$orga/ca/cakey.pem --outfile $myscripts/$orga/ca/cacert.pem 
+}
+
+function createclient(){
+	orga=$1
+	host=$2
+	cecho " > create client certificate and key $orga $host" green
+	if [ ! -d $myscripts/$orga/$host ]
+	then
+		createpkilayout $orga $host
+	fi
+	cp $myscripts/$orga/ca/cacert.pem $myscripts/$orga/$host/pki/CA
+	createkey $orga $host "client"	
+	cp $myscripts/client.info $myscripts/$orga/$host/client.info
+	sed -i 's/ORGA/'$orga'/g' $myscripts/$orga/$host/client.info 
+	sed -i 's/CN/'$host'/g' $myscripts/$orga/$host/client.info 
+	certtool --generate-certificate --template $myscripts/$orga/$host/client.info --load-privkey $myscripts/$orga/$host/pki/libvirt/private/clientkey.pem --load-ca-certificate $myscripts/$orga/ca/cacert.pem --load-ca-privkey $myscripts/$orga/ca/cakey.pem --outfile $myscripts/$orga/$host/pki/libvirt/clientcert.pem
+	fix $orga $host 
+}
+
+function fix(){
+	orga=$1
+	host=$2
+	cecho " > fix permission $orga $host" green
+	chown -R root:root $myscripts/$orga/$host/pki
+	if [ -f $myscripts/$orga/$host/pki/libvirt/private/serverkey.pem ]
+	then
+		chmod 600 $myscripts/$orga/$host/pki/libvirt/private/serverkey.pem
+	fi
+	if [ -f $myscripts/$orga/$host/pki/libvirt/private/clientkey.pem ]
+	then 
+		chmod 644 $myscripts/$orga/$host/pki/libvirt/private/clientkey.pem
+	fi
+}
+
+function createserver(){
+	orga=$1
+	host=$2
+	cecho " > create server certificate and key $orga $host" green
+	if [ ! -d $myscripts/$orga/$host ]
+	then
+		createpkilayout $orga $host
+	fi
+	cp $myscripts/$orga/ca/cacert.pem $myscripts/$orga/$host/pki/CA
+	createkey $orga $host "server"	
+	cp $myscripts/server.info $myscripts/$orga/$host/server.info
+	sed -i 's/ORGA/'$orga'/g' $myscripts/$orga/$host/server.info 
+	sed -i 's/CN/'$host'/g' $myscripts/$orga/$host/server.info 
+	certtool --generate-certificate --template $myscripts/$orga/$host/server.info --load-privkey $myscripts/$orga/$host/pki/libvirt/private/serverkey.pem --load-ca-certificate $myscripts/$orga/ca/cacert.pem --load-ca-privkey $myscripts/$orga/ca/cakey.pem --outfile $myscripts/$orga/$host/pki/libvirt/servercert.pem 
+	fix $orga $host
+}
+
+function clean(){
+	orga=$1
+	rm -Rf $myscripts/$orga
+	rm -f $myscripts/*.pem
+}
+
+function createkey(){
+	orga=$1
+	host=$2
+	role=$3
+	if [ ! -z "$host" ]
+	then
+		case $role in
+			server)
+				dest=$myscripts/$orga/$host/pki/libvirt/private/serverkey.pem
+				;;
+			client)
+				dest=$myscripts/$orga/$host/pki/libvirt/private/clientkey.pem
+				;;
+		esac
+	else
+		dest=$myscripts/$orga/ca/cakey.pem
+	fi
+	if [ -f "$dest" ]
+	then
+		cecho "Key allready exist" red
+		exit 2
+	fi
+	certtool --generate-privkey > $dest 
+}
+
+function createlayout(){
+	orga=$1
+	if [ ! -d "$myscripts/$orga" ]
+	then
+		mkdir -p $myscripts/$orga/ca
+	fi
+}
+
+function createpkilayout(){
+	orga=$1
+	host=$2
+	mkdir -p $myscripts/$orga/$host/pki/CA 
+	mkdir -p $myscripts/$orga/$host/pki/libvirt/private 
+}
+
+
+if [ $UID -ne 0 ]
+then
+	cecho "You should start the script as root or with sudo" red
+	exit 2
+fi
+
+while getopts "c:o:n:zh" opt; do
+	case $opt in
+		c)
+			action=$OPTARG
+			;;
+		o)
+			orga=$OPTARG
+			;;
+		n)
+			host=$OPTARG
+			;;
+		z)
+			action="clean"
+			;;
+		h)
+			usage
+			exit 0
+			;;
+		*)
+			cecho " > Unknown option $opt " red
+			exit 2
+			;;
+	esac
+done
+
+if [ ! -z "$action" ]
+then
+	if [ -z "$orga" ]
+	then
+		cecho " > -o is mandatory " red
+		usage
+		exit 2
+	fi
+	
+	if [ "$action" != "ca" ]
+	then
+		if [ "$action" != "clean" ]
+		then 
+			if [ -z "$host" ]
+			then
+				cecho " > -n is mandatory " red
+				usage
+				exit 2
+			fi
+		fi
+		case $action in
+			client)
+				createclient $orga $host
+				exit 0 
+				;;
+			server)
+				createserver $orga $host
+				exit 0 
+				;;
+			clean)
+				clean $orga
+				exit 2
+				;;
+		esac
+
+	else
+		createca $orga
+		exit 0
+	fi
+fi
+
+usage
+exit 0
+
