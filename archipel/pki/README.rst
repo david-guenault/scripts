@@ -51,7 +51,7 @@ this result in the following structure
      │       └── servercert.pem
      └── server.info
 
-just copy FROGLAB/server1/pki in /etc/pki on server1 and restart libvirt and stop/start libvirt
+just copy FROGLAB/server1/pki in /etc/pki on server1 and stop/start libvirt
 
 create certificate for another server (server2)
 
@@ -60,7 +60,7 @@ create certificate for another server (server2)
  pki -c server -o froglab -n server2
  pki -c client -o froglab -n server2
 
-jsut copy FROGLAB/server2/pki in /etc/pki on server1 and restart libvirt and stop/start libvirt
+jsut copy FROGLAB/server2/pki in /etc/pki on server1 and stop/start libvirt
 
 now server1 and server2 are now able to connect each other remotly. 
 test it with :
