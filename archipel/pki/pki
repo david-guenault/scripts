@@ -2,8 +2,6 @@
 
 # environnement
 export myscripts=$(readlink -f $(dirname $0))
-src=$(readlink -f "$myscripts/../../..")
-. $myscripts/pki.conf
 
 
 function cadre(){
