@@ -2,7 +2,7 @@
 
 # environnement
 export myscripts=$(readlink -f $(dirname $0))
-
+. $myscripts/pki.conf
 
 function cadre(){
 	cecho "+--------------------------------------------------------------------------------" $2
