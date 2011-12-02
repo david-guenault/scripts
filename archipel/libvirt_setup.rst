@@ -1,6 +1,6 @@
 Setup PKI for libvirt and enable remote TLS connections
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-see pki
+Follow this link for the tutoeial about pki._
 
 .. _pki:README
 
