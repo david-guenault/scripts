@@ -43,8 +43,8 @@ you should see a line like this one
 
   root     22242     1  1 Nov30 ?        00:21:35 /usr/sbin/libvirtd -d -l
 
-Enable TLS for VNC
-~~~~~~~~~~~~~~~~~~
+Enable VNC
+~~~~~~~~~~
 
 Edit the file /etc/libvirt/qemu.conf
 
@@ -53,13 +53,6 @@ uncomment the following lines
 ::
 
  vnc_listen = "0.0.0.0"
- vnc_tls = 1
-
-Also uncoment and modify the following line
-
-::
-
- vnc_tls_x509_cert_dir = "/etc/pki/libvirt"
 
 Stop and start libvirt
 
