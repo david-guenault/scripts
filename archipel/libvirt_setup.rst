@@ -6,19 +6,19 @@ see pki/README.rst for a tutorial of creating a pki
 Enable TLS and TCP listen
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Edit the file : /etc/init/libvirt-bin.conf
+Edit the file : /etc/default/libvirt-bin
 
 Change the line 
 
 ::
 
- env libvirtd_opts="-d"
+ libvirtd_opts="-d"
 
 by this one 
 
 ::
 
- env libvirtd_opts="-d -l"
+ libvirtd_opts="-d -l"
 
 Edit /etc/libvirt/libvirtd.conf
 
