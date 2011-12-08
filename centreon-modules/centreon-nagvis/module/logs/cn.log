@@ -1,0 +1,177 @@
+2010 10 12 17:16:11  registered module FrontendModLogonCentreon
+2010 10 12 17:16:11  user not authenticated
+2010 10 12 17:16:11  _GET centreonagvis was not found
+2010 10 12 17:16:11  go2login
+2010 10 12 19:56:44  registered module FrontendModLogonCentreon
+2010 10 12 19:56:44  user not authenticated
+2010 10 12 19:56:44  _GET centreonagvis was not found
+2010 10 12 19:56:44  go2login
+2010 10 13 07:37:42  registered module FrontendModLogonCentreon
+2010 10 13 07:37:42  user not authenticated
+2010 10 13 07:37:42  get session centreonagvis ok
+2010 10 13 07:37:42  There are 1 centreon users logged in with session table id 177 and ip addres 192.168.0.10
+2010 10 13 07:37:42  try to get nagvis credentials
+2010 10 13 07:37:42  
+									SELECT 
+										u.userId,u.name,u.password
+									FROM 
+										centreon.session s
+										INNER JOIN centreon.contact c ON s.user_id = c.contact_id
+											INNER JOIN centreon.acl_group_contacts_relations agcr ON c.contact_id = agcr.contact_contact_id
+												INNER JOIN centreon.acl_groups g ON agcr.acl_group_id = g.acl_group_id
+													INNER JOIN centreon.centreonnagvis cn ON g.acl_group_id = cn.acl_group_id
+														INNER JOIN nagvis.users2roles u2r ON cn.roleId = u2r.roleId
+															INNER JOIN nagvis.users u ON u2r.userId = u.userId
+									WHERE 
+										id=177 AND
+										ip_address = '192.168.0.10'									
+								
+2010 10 13 07:37:42  get credentials failed /
+2010 10 13 07:37:42  go2login
+2010 10 13 07:37:46  registered module FrontendModLogonCentreon
+2010 10 13 07:37:46  user not authenticated
+2010 10 13 07:37:46  get session centreonagvis ok
+2010 10 13 07:37:46  There are 1 centreon users logged in with session table id 177 and ip addres 192.168.0.10
+2010 10 13 07:37:46  try to get nagvis credentials
+2010 10 13 07:37:46  
+									SELECT 
+										u.userId,u.name,u.password
+									FROM 
+										centreon.session s
+										INNER JOIN centreon.contact c ON s.user_id = c.contact_id
+											INNER JOIN centreon.acl_group_contacts_relations agcr ON c.contact_id = agcr.contact_contact_id
+												INNER JOIN centreon.acl_groups g ON agcr.acl_group_id = g.acl_group_id
+													INNER JOIN centreon.centreonnagvis cn ON g.acl_group_id = cn.acl_group_id
+														INNER JOIN nagvis.users2roles u2r ON cn.roleId = u2r.roleId
+															INNER JOIN nagvis.users u ON u2r.userId = u.userId
+									WHERE 
+										id=177 AND
+										ip_address = '192.168.0.10'									
+								
+2010 10 13 07:37:46  get credentials failed /
+2010 10 13 07:37:46  go2login
+2010 10 13 07:38:04  registered module FrontendModLogonCentreon
+2010 10 13 07:38:04  user not authenticated
+2010 10 13 07:38:04  get session centreonagvis ok
+2010 10 13 07:38:04  There are 1 centreon users logged in with session table id 177 and ip addres 192.168.0.10
+2010 10 13 07:38:04  try to get nagvis credentials
+2010 10 13 07:38:04  
+									SELECT 
+										u.userId,u.name,u.password
+									FROM 
+										centreon.session s
+										INNER JOIN centreon.contact c ON s.user_id = c.contact_id
+											INNER JOIN centreon.acl_group_contacts_relations agcr ON c.contact_id = agcr.contact_contact_id
+												INNER JOIN centreon.acl_groups g ON agcr.acl_group_id = g.acl_group_id
+													INNER JOIN centreon.centreonnagvis cn ON g.acl_group_id = cn.acl_group_id
+														INNER JOIN nagvis.users2roles u2r ON cn.roleId = u2r.roleId
+															INNER JOIN nagvis.users u ON u2r.userId = u.userId
+									WHERE 
+										id=177 AND
+										ip_address = '192.168.0.10'									
+								
+2010 10 13 07:38:04  get credentials failed /
+2010 10 13 07:38:04  go2login
+2010 10 13 07:38:28  registered module FrontendModLogonCentreon
+2010 10 13 07:38:28  user not authenticated
+2010 10 13 07:38:28  get session centreonagvis ok
+2010 10 13 07:38:28  There are 1 centreon users logged in with session table id 177 and ip addres 192.168.0.10
+2010 10 13 07:38:28  try to get nagvis credentials
+2010 10 13 07:38:28  
+									SELECT 
+										u.userId,u.name,u.password
+									FROM 
+										centreon.session s
+										INNER JOIN centreon.contact c ON s.user_id = c.contact_id
+											INNER JOIN centreon.acl_group_contacts_relations agcr ON c.contact_id = agcr.contact_contact_id
+												INNER JOIN centreon.acl_groups g ON agcr.acl_group_id = g.acl_group_id
+													INNER JOIN centreon.centreonnagvis cn ON g.acl_group_id = cn.acl_group_id
+														INNER JOIN nagvis.users2roles u2r ON cn.roleId = u2r.roleId
+															INNER JOIN nagvis.users u ON u2r.userId = u.userId
+									WHERE 
+										id=177 AND
+										ip_address = '192.168.0.10'									
+								
+2010 10 13 07:38:28  get credentials failed /
+2010 10 13 07:38:28  go2login
+2010 10 13 07:38:43  registered module FrontendModLogonCentreon
+2010 10 13 07:38:43  user not authenticated
+2010 10 13 07:38:43  get session centreonagvis ok
+2010 10 13 07:38:43  There are 1 centreon users logged in with session table id 177 and ip addres 192.168.0.10
+2010 10 13 07:38:43  try to get nagvis credentials
+2010 10 13 07:38:43  
+									SELECT 
+										u.userId,u.name,u.password
+									FROM 
+										centreon.session s
+										INNER JOIN centreon.contact c ON s.user_id = c.contact_id
+											INNER JOIN centreon.acl_group_contacts_relations agcr ON c.contact_id = agcr.contact_contact_id
+												INNER JOIN centreon.acl_groups g ON agcr.acl_group_id = g.acl_group_id
+													INNER JOIN centreon.centreonnagvis cn ON g.acl_group_id = cn.acl_group_id
+														INNER JOIN nagvis.users2roles u2r ON cn.roleId = u2r.roleId
+															INNER JOIN nagvis.users u ON u2r.userId = u.userId
+									WHERE 
+										id=177 AND
+										ip_address = '192.168.0.10'									
+								
+2010 10 13 07:38:43  get credentials failed /
+2010 10 13 07:38:43  go2login
+2010 10 13 07:40:20  registered module FrontendModLogonCentreon
+2010 10 13 07:40:20  user not authenticated
+2010 10 13 07:40:20  get session centreonagvis ok
+2010 10 13 07:40:20  There are 1 centreon users logged in with session table id 177 and ip addres 192.168.0.10
+2010 10 13 07:40:20  try to get nagvis credentials
+2010 10 13 07:40:20  
+									SELECT 
+										u.userId,u.name,u.password
+									FROM 
+										centreon.session s
+										INNER JOIN centreon.contact c ON s.user_id = c.contact_id
+											INNER JOIN centreon.acl_group_contacts_relations agcr ON c.contact_id = agcr.contact_contact_id
+												INNER JOIN centreon.acl_groups g ON agcr.acl_group_id = g.acl_group_id
+													INNER JOIN centreon.centreonnagvis cn ON g.acl_group_id = cn.acl_group_id
+														INNER JOIN nagvis.users2roles u2r ON cn.roleId = u2r.roleId
+															INNER JOIN nagvis.users u ON u2r.userId = u.userId
+									WHERE 
+										id=177 AND
+										ip_address = '192.168.0.10'									
+								
+2010 10 13 07:40:20  get credentials failed /
+2010 10 13 07:40:20  go2login
+2010 10 13 07:56:14  registered module FrontendModLogonCentreon
+2010 10 13 07:56:14  user not authenticated
+2010 10 13 07:56:14  get session centreonagvis ok
+2010 10 13 07:56:14  There are 1 centreon users logged in with session table id 178 and ip addres 192.168.0.10
+2010 10 13 07:56:14  try to get nagvis credentials
+2010 10 13 07:56:14  
+									SELECT 
+										u.userId,u.name,u.password
+									FROM 
+										centreon.session s
+										INNER JOIN centreon.contact c ON s.user_id = c.contact_id
+											INNER JOIN centreon.acl_group_contacts_relations agcr ON c.contact_id = agcr.contact_contact_id
+												INNER JOIN centreon.acl_groups g ON agcr.acl_group_id = g.acl_group_id
+													INNER JOIN centreon.centreonnagvis cn ON g.acl_group_id = cn.acl_group_id
+														INNER JOIN nagvis.users2roles u2r ON cn.roleId = u2r.roleId
+															INNER JOIN nagvis.users u ON u2r.userId = u.userId
+									WHERE 
+										id=178 AND
+										ip_address = '192.168.0.10'									
+								
+2010 10 13 07:56:14  get credentials ok !
+2010 10 13 07:56:32  registered module FrontendModLogonCentreon
+2010 10 13 07:56:32  user not authenticated
+2010 10 13 07:56:32  _GET centreonagvis was not found
+2010 10 13 07:56:32  go2login
+2010 10 13 16:51:34  registered module FrontendModLogonCentreon
+2010 10 13 16:51:34  user not authenticated
+2010 10 13 16:51:34  _GET centreonagvis was not found
+2010 10 13 16:51:34  go2login
+2010 10 17 11:38:58  registered module FrontendModLogonCentreon
+2010 10 17 11:38:58  user not authenticated
+2010 10 17 11:38:58  _GET centreonagvis was not found
+2010 10 17 11:38:58  go2login
+2010 10 17 16:39:30  registered module FrontendModLogonCentreon
+2010 10 17 16:39:30  user not authenticated
+2010 10 17 16:39:30  _GET centreonagvis was not found
+2010 10 17 16:39:30  go2login

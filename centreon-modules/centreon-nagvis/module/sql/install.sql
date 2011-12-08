@@ -1,0 +1,9 @@
+-- view page
+INSERT INTO `topology` (`topology_id`, `topology_name`, `topology_icone`, `topology_parent`, `topology_page`, `topology_order`, `topology_group`, `topology_url`, `topology_url_opt`, `topology_popup`, `topology_modules`, `topology_show`) VALUES ('', 'Nagvis', NULL, 4, 403, 20, 1, './modules/nagvis/nagvis.php', NULL, '0', '1', '1');
+-- admin pages
+INSERT INTO `topology` (`topology_id`, `topology_name`, `topology_icone`, `topology_parent`, `topology_page`, `topology_order`, `topology_group`, `topology_url`, `topology_url_opt`, `topology_popup`, `topology_modules`, `topology_show`) VALUES ('', 'Nagvis', NULL, 6, 613, 75, 1, './modules/nagvis/nagvis-db-config.php', NULL, '0', '1', '1');
+INSERT INTO `topology` (`topology_id`, `topology_name`, `topology_icone`, `topology_parent`, `topology_page`, `topology_order`, `topology_group`, `topology_url`, `topology_url_opt`, `topology_popup`, `topology_modules`, `topology_show`) VALUES ('', 'Nagvis DB', NULL, 613, 61301, 10, 1, './modules/nagvis/nagvis-db-config.php', NULL, '0', '1', '1');
+INSERT INTO `topology` (`topology_id`, `topology_name`, `topology_icone`, `topology_parent`, `topology_page`, `topology_order`, `topology_group`, `topology_url`, `topology_url_opt`, `topology_popup`, `topology_modules`, `topology_show`) VALUES ('', 'Nagvis Configuration', NULL, 613, 61302, 20, 1, './modules/nagvis/nagvis-config.php', NULL, '0', '1', '1');
+INSERT INTO `topology` (`topology_id`, `topology_name`, `topology_icone`, `topology_parent`, `topology_page`, `topology_order`, `topology_group`, `topology_url`, `topology_url_opt`, `topology_popup`, `topology_modules`, `topology_show`) VALUES ('', 'ACL', NULL, 613, 61303, 30, 1, './modules/nagvis/nagvis-config-mapping.php', NULL, '0', '1', '1');
+-- default configuration
+INSERT INTO `options` (`key`,`value`) VALUES ('centreon-nagvis-uri','/nagvis/frontend/nagvis-js/index.php');

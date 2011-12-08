@@ -1,0 +1,10 @@
+Centreon Nagvis integration v2.0b
+
+CREDIT
+
+This module use jquery (http://jquery.com)
+This module use jquery autoHeight plugin (http://lib.mobius.tw/jquery/myplugin/iframe_autoHeight/api.htm)
+This module will work with 
+	Centreon v2.1.9+ (Centreon is developped by merethis : http://www.centreon.com)
+	Nagvis v1.5.3+ (http://www.nagvis.org)
+	This module have been tested with the following browsers : Chrome, Firefox, IE7

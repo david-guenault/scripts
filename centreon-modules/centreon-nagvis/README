@@ -1,0 +1,331 @@
+Prerequisite
+------------
+
+	A valid installation of centreon 2.1.9+
+	A valid installation of nagvis 1.5.3+
+	If you want to use livestatus as nagvis backend instead of ndo
+		MK Livestatus (see : http://mathias-kettner.de/check_mk_download.html and http://mathias-kettner.de/checkmk_livestatus.html)
+		The centreon multibroker patch (see : http://wiki.monitoring-fr.org/powered/centreon/multi-broker-patch-install#centreon-version-216-a-218)
+
+Get the sources
+---------------
+
+	Download centreon-nagvis-2.1b.tar.gz from http://forge.monitoring-fr.org
+
+Database alteration
+-------------------
+
+	Note : You must execute these queries with root privileges. 
+
+	Centreon Schema
+	---------------
+	
+	NOTE : the centreon database name should differ. So modify it if needed.
+	
+	USE `centreon`;
+	CREATE TABLE `centreonnagvis` (`acl_group_id` int(10) NOT NULL,`roleId` int(10) NOT NULL) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+	Nagvis Mysql Schema
+	-------------------
+
+	CREATE DATABASE /*!32312 IF NOT EXISTS*/`nagvis` /*!40100 DEFAULT CHARACTER SET latin1 */;
+	USE `nagvis`;
+
+	/*Table structure for table `perms` */
+	DROP TABLE IF EXISTS `perms`;
+	CREATE TABLE `perms` (
+	  `permId` int(10) NOT NULL AUTO_INCREMENT,
+	  `mod` varchar(100) DEFAULT NULL,
+	  `act` varchar(100) DEFAULT NULL,
+	  `obj` varchar(100) DEFAULT NULL,
+	  PRIMARY KEY (`permId`),
+	  UNIQUE KEY `permId` (`mod`,`act`,`obj`)
+	) ENGINE=MyISAM AUTO_INCREMENT=150 DEFAULT CHARSET=latin1;
+
+	/*Table structure for table `roles` */
+	DROP TABLE IF EXISTS `roles`;
+	CREATE TABLE `roles` (
+	  `roleId` int(10) NOT NULL AUTO_INCREMENT,
+	  `name` varchar(100) DEFAULT NULL,
+	  PRIMARY KEY (`roleId`),
+	  UNIQUE KEY `roleId` (`name`)
+	) ENGINE=MyISAM AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
+
+	/*Table structure for table `roles2perms` */
+	DROP TABLE IF EXISTS `roles2perms`;
+	CREATE TABLE `roles2perms` (
+	  `roleId` int(10) DEFAULT NULL,
+	  `permId` int(10) DEFAULT NULL,
+	  UNIQUE KEY `roleId` (`roleId`,`permId`)
+	) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+	/*Table structure for table `users` */
+	DROP TABLE IF EXISTS `users`;
+	CREATE TABLE `users` (
+	  `userId` int(10) NOT NULL AUTO_INCREMENT,
+	  `name` varchar(100) DEFAULT NULL,
+	  `password` varchar(40) DEFAULT NULL,
+	  PRIMARY KEY (`userId`),
+	  UNIQUE KEY `userId` (`name`)
+	) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
+
+	/*Table structure for table `users2roles` */
+	DROP TABLE IF EXISTS `users2roles`;
+	CREATE TABLE `users2roles` (
+	  `userId` int(10) DEFAULT NULL,
+	  `roleId` int(10) DEFAULT NULL,
+	  UNIQUE KEY `userId` (`userId`,`roleId`)
+	) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+	/*Table structure for table `version` */
+	DROP TABLE IF EXISTS `version`;
+	CREATE TABLE `version` (
+	  `version` varchar(100) NOT NULL DEFAULT '',
+	  PRIMARY KEY (`version`)
+	) ENGINE=MyISAM DEFAULT CHARSET=latin1;	
+
+	Nagvis Default Data
+	-------------------
+
+	use `nagvis`;
+	insert  into `perms`(`permId`,`mod`,`act`,`obj`) values (1,'*','*','*'),(2,'Overview','view','*'),(3,'Overview','getOverviewRotations','*'),(4,'Overview','getOverviewProperties','*'),(5,'Overview','getOverviewMaps','*'),(6,'Overview','getOverviewAutomaps','*'),(7,'General','*','*'),(8,'Map','view','demo'),(9,'Map','getMapProperties','demo'),(10,'Map','getMapObjects','demo'),(11,'Map','getObjectStates','demo'),(12,'Map','edit','demo'),(13,'Map','delete','demo'),(14,'Map','doEdit','demo'),(15,'Map','doDelete','demo'),(16,'Map','doRename','demo'),(17,'Map','modifyObject','demo'),(18,'Map','createObject','demo'),(19,'Map','deleteObject','demo'),(20,'Map','addModify','demo'),(21,'Map','view','demo2'),(22,'Map','getMapProperties','demo2'),(23,'Map','getMapObjects','demo2'),(24,'Map','getObjectStates','demo2'),(25,'Map','edit','demo2'),(26,'Map','delete','demo2'),(27,'Map','doEdit','demo2'),(28,'Map','doDelete','demo2'),(29,'Map','doRename','demo2'),(30,'Map','modifyObject','demo2'),(31,'Map','createObject','demo2'),(32,'Map','deleteObject','demo2'),(33,'Map','addModify','demo2'),(34,'Map','view','demo-map'),(35,'Map','getMapProperties','demo-map'),(36,'Map','getMapObjects','demo-map'),(37,'Map','getObjectStates','demo-map'),(38,'Map','edit','demo-map'),(39,'Map','delete','demo-map'),(40,'Map','doEdit','demo-map'),(41,'Map','doDelete','demo-map'),(42,'Map','doRename','demo-map'),(43,'Map','modifyObject','demo-map'),(44,'Map','createObject','demo-map'),(45,'Map','deleteObject','demo-map'),(46,'Map','addModify','demo-map'),(47,'Map','view','demo-server'),(48,'Map','getMapProperties','demo-server'),(49,'Map','getMapObjects','demo-server'),(50,'Map','getObjectStates','demo-server'),(51,'Map','edit','demo-server'),(52,'Map','delete','demo-server'),(53,'Map','doEdit','demo-server'),(54,'Map','doDelete','demo-server'),(55,'Map','doRename','demo-server'),(56,'Map','modifyObject','demo-server'),(57,'Map','createObject','demo-server'),(58,'Map','deleteObject','demo-server'),(59,'Map','addModify','demo-server'),(60,'Rotation','view','demo'),(61,'AutoMap','view','__automap'),(62,'AutoMap','getAutomapProperties','__automap'),(63,'AutoMap','getAutomapObjects','__automap'),(64,'AutoMap','getObjectStates','__automap'),(65,'AutoMap','parseAutomap','__automap'),(66,'AutoMap','edit','__automap'),(67,'AutoMap','delete','__automap'),(68,'AutoMap','doEdit','__automap'),(69,'AutoMap','doDelete','__automap'),(70,'AutoMap','doRename','__automap'),(71,'AutoMap','modifyObject','__automap'),(72,'AutoMap','createObject','__automap'),(73,'AutoMap','deleteObject','__automap'),(74,'ChangePassword','view','*'),(75,'ChangePassword','change','*'),(76,'Search','view','*'),(77,'Auth','logout','*'),(78,'Map','view','*'),(79,'Map','getMapProperties','*'),(80,'Map','getMapObjects','*'),(81,'Map','getObjectStates','*'),(82,'Map','edit','*'),(83,'Map','delete','*'),(84,'Map','doEdit','*'),(85,'Map','doDelete','*'),(86,'Map','doRename','*'),(87,'Map','modifyObject','*'),(88,'Map','createObject','*'),(89,'Map','deleteObject','*'),(90,'Map','addModify','*'),(91,'AutoMap','view','*'),(92,'AutoMap','getAutomapProperties','*'),(93,'AutoMap','getAutomapObjects','*'),(94,'AutoMap','getObjectStates','*'),(95,'AutoMap','parseAutomap','*'),(96,'AutoMap','edit','*'),(97,'AutoMap','delete','*'),(98,'AutoMap','doEdit','*'),(99,'AutoMap','doDelete','*'),(100,'AutoMap','doRename','*'),(101,'AutoMap','modifyObject','*'),(102,'AutoMap','createObject','*'),(103,'AutoMap','deleteObject','*'),(104,'Rotation','view','*'),(105,'UserMgmt','manage','*'),(106,'UserMgmt','view','*'),(107,'UserMgmt','getUserRoles','*'),(108,'UserMgmt','getAllRoles','*'),(109,'UserMgmt','doAdd','*'),(110,'UserMgmt','doEdit','*'),(111,'UserMgmt','doDelete','*'),(112,'RoleMgmt','manage','*'),(113,'RoleMgmt','view','*'),(114,'RoleMgmt','getRolePerms','*'),(115,'RoleMgmt','doAdd','*'),(116,'RoleMgmt','doEdit','*'),(117,'RoleMgmt','doDelete','*'),(118,'Map','add','*'),(119,'Map','doAdd','*'),(120,'AutoMap','add','*'),(121,'AutoMap','doAdd','*'),(122,'MainCfg','edit','*'),(123,'MainCfg','doEdit','*');
+	insert  into `roles`(`roleId`,`name`) values (1,'Administrators'),(2,'Users (read-only)'),(3,'Guests');
+	insert  into `users`(`userId`,`name`,`password`) values (1,'nagiosadmin','7f09c620da83db16ef9b69abfb8edd6b849d2d2b'),(2,'guest','7f09c620da83db16ef9b69abfb8edd6b849d2d2b');
+	insert  into `users2roles`(`userId`,`roleId`) values (1,1),(2,3);
+	insert  into `roles2perms`(`roleId`,`permId`) values (1,1),(2,2),(2,3),(2,4),(2,5),(2,6),(2,7),(2,76),(2,77),(2,78),(2,79),(2,80),(2,81),(2,91),(2,92),(2,93),(2,94),(2,95),(2,104),(3,2),(3,3),(3,4),(3,5),(3,6),(3,7),(3,60),(3,61),(3,62),(3,63),(3,64),(3,65),(3,74),(3,75),(3,76),(3,77),(3,124),(3,125),(3,126),(3,127);	
+	insert  into `version`(`version`) values ('1.5.3');
+
+	Privileges
+	----------
+	
+	NOTE1 : Centreon is the centreon user. Nagvis is the nagvis database user (mysql schema only. In this mod the sqlite database is not used). 
+	NOTE2 : the centreon database name should differ. So modify it if needed.
+	
+	GRANT ALL PRIVILEGES ON nagvis.* to 'nagvis'@'localhost' identified by 'manager';
+	GRANT SELECT on centreon.centreonnagvis to 'nagvis'@'localhost';
+	GRANT SELECT on centreon.acl_groups to 'nagvis'@'localhost';
+	GRANT SELECT on centreon.session to 'nagvis'@'localhost';
+	GRANT SELECT on centreon.acl_group_contacts_relations to 'nagvis'@'localhost';
+	GRANT SELECT on centreon.contact to 'nagvis'@'localhost';
+	GRANT SELECT on nagvis.roles to 'centreon'@'localhost';
+	FLUSH PRIVILEGES;
+
+Install Nagvis Logon,Authentication and Authorisation modules
+-------------------------------------------------------------
+	unpack the downloaded archive : centreon-nagvis-2.1b.tar.gz
+	copy the required file to your nagvis installation (see List of impacted files) :
+	Exemple :
+		cp -Rf  centreon-nagvis-nagvis-module-2.1b/* /opt/nagvis/
+		chown -R www-data:www-data /opt/nagvis
+
+	nagvis.ini.php and GlobalMain.cfg must be modified manualy.
+	
+	See Nagvis configuration for nagvis.ini.php
+	
+	The file /path/to/nagvis/share/server/core/classes/GlobalMainCfg.php must be modified as follow :
+	
+	Add these lines Just after the following line (number 47) : $this->validConfig = Array( :
+	
+				'authmysqldb'=>array(
+					'host' => Array('must' => 1,
+					'editable' => 1,
+					'default' => 'localhost',
+					'match' => MATCH_STRING),
+                 	'port' =>  Array('must' => 1,
+					'editable' => 1,
+					'default' => 3306,
+					'match' => MATCH_INTEGER),
+					'user' => Array('must' => 1,
+					'editable' => 1,
+					'default' => 'nagvis',
+					'match' => MATCH_STRING),
+					'password' => Array('must' => 1,
+					'editable' => 1,
+					'default' => 'manager',
+					'match' => MATCH_STRING),
+					'database' => Array('must' => 1,
+					'editable' => 1,
+					'default' => 'nagvis',
+					'match' => MATCH_STRING),
+					'centreondatabase' => Array('must' => 1,
+					'editable' => 1,
+					'default' => 'centreon',
+					'match' => MATCH_STRING),
+					'authlog' => Array('must' => 1,
+					'editable' => 1,
+					'default' => '/tmp/cn.log',
+					'match' => MATCH_STRING)
+			),     
+
+Nagvis configuration
+--------------------
+
+	Edit your Nagvis configuration file ([nagvisprefix/etc/nagvis.ini.php]).
+	
+	Add this lines to the [global] section.
+	
+		; specific to centreon-nagvis integration
+		authmodule="CoreAuthModCentreon"
+		authorisationmodule="CoreAuthorisationModCentreon"
+		logonmodule="LogonCentreon"		
+	
+	Also make sure (if you want total centreon integration) to modify the default url and target in [defaults] section.
+	
+		; target for the icon links
+		urltarget="_top"
+		; URL template for host object links
+		hosturl="/centreon/main.php?p=201&o=hd&host_name=[host_name]"
+		; URL template for hostgroup object links
+		hostgroupurl="/centreon/main.php?search=[hostgroup_name]&p=20104&limit=100&list=&o=hg"
+		; URL template for service object links
+		serviceurl="/centreon/main.php?p=202&o=svcd&host_name=[host_name]&service_description=[service_description]"
+		; URL template for servicegroup object links
+		servicegroupurl="/centreon/main.php?p=20212&o=svcOVSG"
+		
+	Add these lines just before the EOF part at the end of the file
+	
+		NOTE : centreondatabase should differ so modify it if needed.
+	
+		[authmysqldb]
+		host="localhost" 
+		port=3306
+		user="nagvis" 
+		password="manager" 
+		database="nagvis"
+		centreondatabase="centreon"
+		authlog="/tmp/cn.log"
+
+Install Centreon Module
+-----------------------
+
+	If you have installed an older version of this module you should remove it before !
+
+	copy centreon-nagvis-centreon-module-2.1b to [path to centreon]/www/modules and rename it to nagvis
+	make sure to change the owner of the folder (and its content) to the one that run your apache server
+	
+	exemple : 
+		sudo cp -Rf centreon-nagvis-centreon-module-2.1b /opt/centreon/www/modules/nagvis
+		sudo chown -Rf www-data:www-data /opt/centreon/www/modules/nagvis
+	 
+	Logon with administrator privileges in centreon
+	Go to Administration -> modules 
+	Search for the nagvis module and click on the action button for installation
+
+Configure Centreon Module
+-------------------------
+	Go to Configuration->Nagvis->Nagvis DB
+	Fill the required information to access nagvis DB and save
+
+THAT'S ALL FOLKS ! You are now ready to configure mapping between Centreon Acl Groups and Nagvis Roles in Configuration->Nagvis->ACL
+
+Final note : when you create a role in nagvis don't forget to associate an user to this role
+
+Known problems
+--------------
+> when you logout from centreon, you are not automatically logged out from nagvis. 
+> you cannot use the module as administrator user in centreon (not yet)
+
+Todo
+----
+> Code cleanup
+> Code auditing
+> automatic role/user creation in nagvis from centreon module
+> enable nagvis adminsitrator access to adminstrors of centreon
+> Packaging and install script
+
+ANNEXES
+-------
+
+	Simplified nagvis.ini.php
+	-------------------------
+
+	[global]
+	authmodule="CoreAuthCentreon"
+	authorisationmodule="CoreAuthorisationModCentreon"
+	logonmodule="LogonCentreon"
+	[paths]
+	base="/opt/nagvis/"
+	[defaults]
+	urltarget="_top"
+	hosturl="/centreon/main.php?p=201&o=hd&host_name=[host_name]"
+	hostgroupurl="/centreon/main.php?search=[hostgroup_name]&p=20104&limit=100&list=&o=hg"
+	serviceurl="/centreon/main.php?p=202&o=svcd&host_name=[host_name]&service_description=[service_description]"
+	servicegroupurl="/centreon/main.php?p=20212&o=svcOVSG"
+	[index]
+	[automap]
+	[wui]
+	[worker]
+	[backend_live_1]
+	backendtype="mklivestatus"
+	socket="unix:/opt/monitor/var/rw/live"
+	[backend_ndomy_1]
+	backendtype="ndomy"
+	[backend_merlinmy_1]
+	backendtype="merlinmy"
+	[rotation_demo]
+	maps="demo,Demo2:demo2"
+	interval=15
+	[states]
+	[authmysqldb]
+	host="localhost"
+	port=3306
+	user="nagvis"
+	password="manager"
+	database="nagvis"
+	centreondatabase="centreon"
+	authlog="/tmp/cn.log"
+
+	List of impacted files
+	----------------------
+	
+		centreon-nagvis-nagvismodule.tar.gz
+		-------------------------------------
+	
+		nagvis
+		├── etc
+		│   └── nagvis.ini.php									Configuration alteration
+		└── share
+			├── frontend
+			│	├── nagvis-js
+		    │  	│   └── classes
+		    │  	│       └── FrontendModLogonCentreon.php		New File
+			│	└── wui
+		    │      	└── classes
+			│           └── WuiModLogonCentreon.php				New File
+		   	└── server
+		   	   	└── core
+		   	       	└── classes
+		   	        	├── CoreAuthModCentreon.php				New File
+		   	        	├── CoreAuthorisationModCentreon.php	New File
+		   	        	├── CoreCentreonHandler.php				New File
+		   	        	└── GlobalMainCfg.php					Patched File
+	
+		centreon-nagvis-centreonmodule.tar.gz
+		-------------------------------------
+	
+		centreon
+		└── www
+			└── modules 
+				└── nagvis
+				    ├── conf.php
+				    ├── infos
+				    │   └── infos.txt
+				    ├── install.sh
+				    ├── javascript
+				    │   ├── jquery.autoheight.js
+				    │   └── jquery.js
+				    ├── logs
+				    │   └── cn.log
+				    ├── nagvis-config-mapping.php
+				    ├── nagvis-config.php
+				    ├── nagvis-db-config.php
+				    ├── nagvis.php
+				    ├── sql
+				    │   ├── install.sql
+				    │   └── uninstall.sql
+				    └── utils.php
+		    
+
+
+
+								
